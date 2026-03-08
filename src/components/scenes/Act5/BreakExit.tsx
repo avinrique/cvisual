@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import BitCharacter from '@/components/shared/BitCharacter';
 import GlowBox from '@/components/shared/GlowBox';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const TRACK_R = 100;
 const CX = 140;
@@ -16,22 +17,23 @@ export default function BreakExit() {
   const [broken, setBroken] = useState(false);
   const [output, setOutput] = useState<number[]>([]);
   const [crumbled, setCrumbled] = useState<number[]>([]);
+  const { scaledTimeout, scaledInterval } = useAnimationSpeed();
 
   useEffect(() => {
     if (broken) return;
     if (iteration > TOTAL_ITERS) return;
 
-    const timer = setTimeout(() => {
+    const cancelTimer = scaledTimeout(() => {
       const targetAngle = -90 + ((iteration - 1) / TOTAL_ITERS) * 360;
       setAngle(targetAngle);
 
       if (iteration === BREAK_AT) {
         setBroken(true);
         // Crumble track segments
-        const crumbleInterval = setInterval(() => {
+        const cancelCrumble = scaledInterval(() => {
           setCrumbled(prev => {
             if (prev.length >= 12) {
-              clearInterval(crumbleInterval);
+              cancelCrumble();
               return prev;
             }
             return [...prev, prev.length];
@@ -44,8 +46,8 @@ export default function BreakExit() {
       setIteration(prev => prev + 1);
     }, 1000);
 
-    return () => clearTimeout(timer);
-  }, [iteration, broken]);
+    return () => cancelTimer();
+  }, [iteration, broken, scaledTimeout, scaledInterval]);
 
   const bitRad = (angle * Math.PI) / 180;
   const bitX = broken ? CX + TRACK_R + 80 : CX + TRACK_R * Math.cos(bitRad);

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Terminal from '@/components/shared/Terminal';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 const recapLines = [
   { text: 'I can listen.', icon: 'scanf', color: '#00BFFF' },
   { text: 'I can speak.', icon: 'printf', color: '#22C55E' },
@@ -15,36 +16,30 @@ export default function Closing() {
   const [visibleLines, setVisibleLines] = useState(0);
   const [showZoomOut, setShowZoomOut] = useState(false);
   const [showEndCard, setShowEndCard] = useState(false);
-
-  // Phase 0: dark void with cursor
-  // Phase 1: lines appear one by one
-  // Phase 2: zoom out to globe
-  // Phase 3: end card
+  const { scaledTimeout } = useAnimationSpeed();
 
   useEffect(() => {
-    const t = setTimeout(() => setPhase(1), 2000);
-    return () => clearTimeout(t);
-  }, []);
+    return scaledTimeout(() => setPhase(1), 2000);
+  }, [scaledTimeout]);
 
   useEffect(() => {
     if (phase !== 1) return;
     if (visibleLines >= recapLines.length) {
-      setTimeout(() => setPhase(2), 2000);
-      return;
+      return scaledTimeout(() => setPhase(2), 2000);
     }
-    const t = setTimeout(() => setVisibleLines(v => v + 1), 1200);
-    return () => clearTimeout(t);
-  }, [phase, visibleLines]);
+    return scaledTimeout(() => setVisibleLines(v => v + 1), 1200);
+  }, [phase, visibleLines, scaledTimeout]);
 
   useEffect(() => {
     if (phase === 2) {
-      setTimeout(() => setShowZoomOut(true), 500);
-      setTimeout(() => setPhase(3), 4000);
+      const c1 = scaledTimeout(() => setShowZoomOut(true), 500);
+      const c2 = scaledTimeout(() => setPhase(3), 4000);
+      return () => { c1(); c2(); };
     }
     if (phase === 3) {
-      setTimeout(() => setShowEndCard(true), 1500);
+      return scaledTimeout(() => setShowEndCard(true), 1500);
     }
-  }, [phase]);
+  }, [phase, scaledTimeout]);
 
   return (
     <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void">

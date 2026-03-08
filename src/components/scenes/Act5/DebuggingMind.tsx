@@ -3,14 +3,16 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GlowBox from '@/components/shared/GlowBox';
 import InteractiveIndicator from '@/components/shared/InteractiveIndicator';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 export default function DebuggingMind() {
   const [choice, setChoice] = useState<null | 1 | 2>(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  const { scaledTimeout } = useAnimationSpeed();
 
   const handlePick = (door: 1 | 2) => {
     setChoice(door);
-    setTimeout(() => setShowExplanation(true), 1500);
+    scaledTimeout(() => setShowExplanation(true), 1500);
   };
 
   const reset = () => {

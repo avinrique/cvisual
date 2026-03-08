@@ -5,6 +5,7 @@ import BitCharacter from '@/components/shared/BitCharacter';
 import Terminal from '@/components/shared/Terminal';
 import InteractiveIndicator from '@/components/shared/InteractiveIndicator';
 import Narration from '@/components/shared/Narration';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 type Operator = '+' | '-' | '*' | '/';
 
@@ -37,6 +38,7 @@ export default function SwitchElevator() {
   const [hasBreak, setHasBreak] = useState(true);
   const [animatingFloor, setAnimatingFloor] = useState(4);
   const [fallthroughFloors, setFallthroughFloors] = useState<number[]>([]);
+  const { scaledTimeout } = useAnimationSpeed();
 
   const targetFloor = FLOORS.find(f => f.op === selectedOp)!;
   const result = compute(numA, selectedOp, numB);
@@ -54,16 +56,16 @@ export default function SwitchElevator() {
         fallFloors.push(FLOORS[i].level);
       }
       fallFloors.push(0); // basement
-      const timers: NodeJS.Timeout[] = [];
+      const cleanups: (() => void)[] = [];
       fallFloors.forEach((fl, i) => {
-        timers.push(setTimeout(() => {
+        cleanups.push(scaledTimeout(() => {
           setAnimatingFloor(fl);
           setFallthroughFloors(fallFloors.slice(0, i + 1));
         }, i * 500));
       });
-      return () => timers.forEach(clearTimeout);
+      return () => cleanups.forEach(fn => fn());
     }
-  }, [selectedOp, hasBreak, targetFloor.level]);
+  }, [selectedOp, hasBreak, targetFloor.level, scaledTimeout]);
 
   const breakStr = hasBreak ? '\n    break;' : '\n    // no break! FALLS THROUGH!';
 

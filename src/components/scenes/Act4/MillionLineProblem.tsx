@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Narration from '@/components/shared/Narration';
 import GlowBox from '@/components/shared/GlowBox';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const printfLines = Array.from({ length: 40 }, (_, i) =>
   `printf("Line ${i + 1}\\n");`
@@ -10,16 +11,17 @@ const printfLines = Array.from({ length: 40 }, (_, i) =>
 
 export default function MillionLineProblem() {
   const [phase, setPhase] = useState(0);
+  const { scaledTimeout } = useAnimationSpeed();
 
   useEffect(() => {
-    const timers = [
-      setTimeout(() => setPhase(1), 1500),
-      setTimeout(() => setPhase(2), 4000),
-      setTimeout(() => setPhase(3), 5500),
-      setTimeout(() => setPhase(4), 7000),
+    const c = [
+      scaledTimeout(() => setPhase(1), 1500),
+      scaledTimeout(() => setPhase(2), 4000),
+      scaledTimeout(() => setPhase(3), 5500),
+      scaledTimeout(() => setPhase(4), 7000),
     ];
-    return () => timers.forEach(clearTimeout);
-  }, []);
+    return () => c.forEach(fn => fn());
+  }, [scaledTimeout]);
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-void">

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CodeTyper from '@/components/shared/CodeTyper';
 import Terminal from '@/components/shared/Terminal';
 import Narration from '@/components/shared/Narration';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const HELLO_WORLD_CODE = `#include <stdio.h>
 
@@ -20,6 +21,7 @@ export default function FirstPrintf() {
   const [textFlying, setTextFlying] = useState(false);
   const [terminalText, setTerminalText] = useState('');
   const [showNewline, setShowNewline] = useState(false);
+  const { scaledTimeout } = useAnimationSpeed();
 
   // 0: code typing, follows line callbacks
   // line 0: #include done -> tooltip
@@ -30,24 +32,24 @@ export default function FirstPrintf() {
   const handleLineComplete = useCallback((lineIndex: number) => {
     if (lineIndex === 0) {
       setTooltip('stdio.h = Standard Input/Output library. Gives us printf and scanf.');
-      setTimeout(() => setTooltip(null), 3000);
+      scaledTimeout(() => setTooltip(null), 3000);
     }
     if (lineIndex === 2) {
       setBraceOpen(true);
     }
     if (lineIndex === 3) {
       setPrintfGlow(true);
-      setTimeout(() => {
+      scaledTimeout(() => {
         setTextFlying(true);
-        setTimeout(() => {
+        scaledTimeout(() => {
           setTerminalText('Hello, World!');
           setTextFlying(false);
           setShowNewline(true);
-          setTimeout(() => setPhase(1), 1500);
+          scaledTimeout(() => setPhase(1), 1500);
         }, 1500);
       }, 1000);
     }
-  }, []);
+  }, [scaledTimeout]);
 
   const handleCodeComplete = useCallback(() => {
     // code is done typing

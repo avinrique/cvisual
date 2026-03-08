@@ -17,6 +17,7 @@ interface AppState {
   audioEnabled: boolean;
   isTransitioning: boolean;
   animationSpeed: number;
+  isPaused: boolean;
 
   nextScene: () => void;
   prevScene: () => void;
@@ -25,6 +26,7 @@ interface AppState {
   toggleAudio: () => void;
   setTransitioning: (v: boolean) => void;
   setAnimationSpeed: (speed: number) => void;
+  togglePause: () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -34,12 +36,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   audioEnabled: false,
   isTransitioning: false,
   animationSpeed: 1,
+  isPaused: false,
 
   nextScene: () => {
     if (!canNavigate()) return;
     const { currentSceneIndex, totalScenes } = get();
     if (currentSceneIndex < totalScenes - 1) {
-      set({ currentSceneIndex: currentSceneIndex + 1 });
+      set({ currentSceneIndex: currentSceneIndex + 1, isPaused: false });
     }
   },
 
@@ -47,14 +50,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!canNavigate()) return;
     const { currentSceneIndex } = get();
     if (currentSceneIndex > 0) {
-      set({ currentSceneIndex: currentSceneIndex - 1 });
+      set({ currentSceneIndex: currentSceneIndex - 1, isPaused: false });
     }
   },
 
   goToScene: (index: number) => {
     const { totalScenes } = get();
     if (index >= 0 && index < totalScenes) {
-      set({ currentSceneIndex: index });
+      set({ currentSceneIndex: index, isPaused: false });
     }
   },
 
@@ -62,4 +65,5 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleAudio: () => set(s => ({ audioEnabled: !s.audioEnabled })),
   setTransitioning: (v) => set({ isTransitioning: v }),
   setAnimationSpeed: (speed) => set({ animationSpeed: speed }),
+  togglePause: () => set(s => ({ isPaused: !s.isPaused })),
 }));

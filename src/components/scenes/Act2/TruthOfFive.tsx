@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import BitCharacter from '@/components/shared/BitCharacter';
 import Terminal from '@/components/shared/Terminal';
 import Narration from '@/components/shared/Narration';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const PARADE_NUMBERS = [
   { value: '5', color: '#00BFFF', delay: 0 },
@@ -28,6 +29,7 @@ export default function TruthOfFive() {
   const [entries, setEntries] = useState<NumberEntry[]>([]);
   const [passedNumbers, setPassedNumbers] = useState<string[]>([]);
   const [gateOpen, setGateOpen] = useState(false);
+  const { scaledTimeout } = useAnimationSpeed();
 
   useEffect(() => {
     if (currentIndex >= PARADE_NUMBERS.length) return;
@@ -43,19 +45,16 @@ export default function TruthOfFive() {
     setEntries(prev => [...prev.slice(-1), entry]);
     setGateOpen(false);
 
-    // Approach -> Check
-    const t1 = setTimeout(() => {
+    const c1 = scaledTimeout(() => {
       setEntries(prev => prev.map((e, i) => (i === prev.length - 1 ? { ...e, phase: 'check' } : e)));
     }, 800);
 
-    // Check -> Result
-    const t2 = setTimeout(() => {
+    const c2 = scaledTimeout(() => {
       if (!item.isZero) setGateOpen(true);
       setEntries(prev => prev.map((e, i) => (i === prev.length - 1 ? { ...e, phase: 'result' } : e)));
     }, 1600);
 
-    // Done, next
-    const t3 = setTimeout(() => {
+    const c3 = scaledTimeout(() => {
       if (!item.isZero) {
         setPassedNumbers(prev => [...prev, item.value]);
       }
@@ -64,12 +63,8 @@ export default function TruthOfFive() {
       setCurrentIndex(i => i + 1);
     }, 2800);
 
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-    };
-  }, [currentIndex]);
+    return () => { c1(); c2(); c3(); };
+  }, [currentIndex, scaledTimeout]);
 
   const currentEntry = entries[entries.length - 1];
   const isZeroCurrent = currentEntry?.isZero && currentEntry.phase !== 'done';

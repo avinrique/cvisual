@@ -21,11 +21,16 @@ export default function SceneManager() {
     containerRef.current?.focus();
   }, []);
 
+  const togglePause = useAppStore(s => s.togglePause);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent | KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
     switch (e.key) {
       case ' ':
+        e.preventDefault();
+        togglePause();
+        break;
       case 'ArrowRight':
       case 'ArrowDown':
         e.preventDefault();
@@ -37,7 +42,7 @@ export default function SceneManager() {
         prevScene();
         break;
     }
-  }, [nextScene, prevScene]);
+  }, [nextScene, prevScene, togglePause]);
 
   // Global keyboard listener as fallback
   useEffect(() => {

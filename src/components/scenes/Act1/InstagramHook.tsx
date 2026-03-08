@@ -4,12 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTypewriter } from '@/components/hooks/useTypewriter';
 import { useAppStore } from '@/lib/store';
 import Narration from '@/components/shared/Narration';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const PARTICLE_COUNT = 12;
 
 export default function InstagramHook() {
   const [phase, setPhase] = useState(0);
   const showPipelineHUD = useAppStore((s) => s.showPipelineHUD);
+  const { scaledTimeout } = useAnimationSpeed();
 
   // Phase 0: phone appears, 1: typing username, 2: particles lift off,
   // 3: particles travel to PROGRAM box, 4: "Welcome back" emerges,
@@ -19,24 +21,24 @@ export default function InstagramHook() {
     text: 'avin',
     speed: 180,
     delay: 1200,
-    onComplete: () => setTimeout(() => setPhase(2), 800),
+    onComplete: () => scaledTimeout(() => setPhase(2), 800),
   });
 
   useEffect(() => {
-    setTimeout(() => setPhase(1), 500);
-  }, []);
+    return scaledTimeout(() => setPhase(1), 500);
+  }, [scaledTimeout]);
 
   useEffect(() => {
-    if (phase === 2) setTimeout(() => setPhase(3), 1200);
-    if (phase === 3) setTimeout(() => setPhase(4), 1500);
-    if (phase === 4) setTimeout(() => setPhase(5), 2000);
+    if (phase === 2) return scaledTimeout(() => setPhase(3), 1200);
+    if (phase === 3) return scaledTimeout(() => setPhase(4), 1500);
+    if (phase === 4) return scaledTimeout(() => setPhase(5), 2000);
     if (phase === 5) {
-      setTimeout(() => {
+      return scaledTimeout(() => {
         setPhase(6);
         showPipelineHUD();
       }, 3000);
     }
-  }, [phase, showPipelineHUD]);
+  }, [phase, showPipelineHUD, scaledTimeout]);
 
   const particles = Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
     id: i,

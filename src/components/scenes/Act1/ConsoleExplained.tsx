@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Terminal from '@/components/shared/Terminal';
 import Narration from '@/components/shared/Narration';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const VIGNETTES = [
   { label: 'Linux Terminal', icon: '$_', color: 'var(--accent-green)', from: { x: -300, y: -200 } },
@@ -13,16 +14,16 @@ const VIGNETTES = [
 
 export default function ConsoleExplained() {
   const [phase, setPhase] = useState(0);
-  // 0: terminal grows, 1: vignettes fly in, 2: vignettes shrink to center, 3: CONSOLE text
+  const { scaledTimeout } = useAnimationSpeed();
 
   useEffect(() => {
-    const t = [
-      setTimeout(() => setPhase(1), 1500),
-      setTimeout(() => setPhase(2), 4000),
-      setTimeout(() => setPhase(3), 5500),
+    const c = [
+      scaledTimeout(() => setPhase(1), 1500),
+      scaledTimeout(() => setPhase(2), 4000),
+      scaledTimeout(() => setPhase(3), 5500),
     ];
-    return () => t.forEach(clearTimeout);
-  }, []);
+    return () => c.forEach(fn => fn());
+  }, [scaledTimeout]);
 
   return (
     <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void">

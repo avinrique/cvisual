@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import BitCharacter from '@/components/shared/BitCharacter';
 import GlowBox from '@/components/shared/GlowBox';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const TOTAL = 5;
 const SKIP_AT = 3;
@@ -12,6 +13,7 @@ export default function ContinueTrampoline() {
   const [output, setOutput] = useState<(number | null)[]>([]);
   const [bouncing, setBouncing] = useState(false);
   const [phase, setPhase] = useState<'running' | 'done'>('running');
+  const { scaledTimeout } = useAnimationSpeed();
 
   useEffect(() => {
     if (phase === 'done') return;
@@ -20,21 +22,21 @@ export default function ContinueTrampoline() {
       return;
     }
 
-    const timer = setTimeout(() => {
+    const cancelTimer = scaledTimeout(() => {
       const next = iteration + 1;
       setIteration(next);
 
       if (next === SKIP_AT) {
         setBouncing(true);
         setOutput(prev => [...prev, null]); // gap
-        setTimeout(() => setBouncing(false), 800);
+        scaledTimeout(() => setBouncing(false), 800);
       } else {
         setOutput(prev => [...prev, next]);
       }
     }, 1200);
 
-    return () => clearTimeout(timer);
-  }, [iteration, phase]);
+    return () => cancelTimer();
+  }, [iteration, phase, scaledTimeout]);
 
   // Track positions for stations
   const stationX = (i: number) => 40 + i * 70;

@@ -2,23 +2,25 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Narration from '@/components/shared/Narration';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const GRID = 6;
 const CELL = 50;
 
 export default function GotoSpaghetti() {
   const [phase, setPhase] = useState(0);
+  const { scaledTimeout } = useAnimationSpeed();
 
   useEffect(() => {
-    const timers = [
-      setTimeout(() => setPhase(1), 2000),
-      setTimeout(() => setPhase(2), 4000),
-      setTimeout(() => setPhase(3), 6500),
-      setTimeout(() => setPhase(4), 9000),
-      setTimeout(() => setPhase(5), 11500),
+    const cleanups = [
+      scaledTimeout(() => setPhase(1), 2000),
+      scaledTimeout(() => setPhase(2), 4000),
+      scaledTimeout(() => setPhase(3), 6500),
+      scaledTimeout(() => setPhase(4), 9000),
+      scaledTimeout(() => setPhase(5), 11500),
     ];
-    return () => timers.forEach(clearTimeout);
-  }, []);
+    return () => cleanups.forEach(fn => fn());
+  }, [scaledTimeout]);
 
   // Orderly traffic paths (horizontal/vertical)
   const orderlyPaths = [

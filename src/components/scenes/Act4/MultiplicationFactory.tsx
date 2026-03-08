@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GlowBox from '@/components/shared/GlowBox';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const BASE = 7;
 
@@ -9,22 +10,23 @@ export default function MultiplicationFactory() {
   const [currentMultiplier, setCurrentMultiplier] = useState(0);
   const [products, setProducts] = useState<{ m: number; p: number }[]>([]);
   const [spark, setSpark] = useState(false);
+  const { scaledTimeout } = useAnimationSpeed();
 
   useEffect(() => {
     if (currentMultiplier >= 10) return;
 
-    const timer = setTimeout(() => {
+    const cancelTimer = scaledTimeout(() => {
       const m = currentMultiplier + 1;
       setCurrentMultiplier(m);
       setSpark(true);
-      setTimeout(() => {
+      scaledTimeout(() => {
         setSpark(false);
         setProducts(prev => [...prev, { m, p: BASE * m }]);
       }, 500);
     }, 1400);
 
-    return () => clearTimeout(timer);
-  }, [currentMultiplier]);
+    return () => cancelTimer();
+  }, [currentMultiplier, scaledTimeout]);
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-void px-4">

@@ -2,21 +2,21 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Narration from '@/components/shared/Narration';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 export default function CalculatorDemo() {
   const [phase, setPhase] = useState(0);
-  // 0: calc appears, 1: numbers float in, 2: enter calc + shake + gear,
-  // 3: result pops out, 4: pipeline lights up
+  const { scaledTimeout } = useAnimationSpeed();
 
   useEffect(() => {
-    const t = [
-      setTimeout(() => setPhase(1), 1000),
-      setTimeout(() => setPhase(2), 2500),
-      setTimeout(() => setPhase(3), 4200),
-      setTimeout(() => setPhase(4), 5500),
+    const c = [
+      scaledTimeout(() => setPhase(1), 1000),
+      scaledTimeout(() => setPhase(2), 2500),
+      scaledTimeout(() => setPhase(3), 4200),
+      scaledTimeout(() => setPhase(4), 5500),
     ];
-    return () => t.forEach(clearTimeout);
-  }, []);
+    return () => c.forEach(fn => fn());
+  }, [scaledTimeout]);
 
   const pipelineStages = [
     { label: 'INPUT', color: 'var(--accent-blue)', active: phase >= 1 },

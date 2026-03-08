@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import GlowBox from '@/components/shared/GlowBox';
 import InteractiveIndicator from '@/components/shared/InteractiveIndicator';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 export default function NestedLoopClock() {
   const [hour, setHour] = useState(0);
@@ -10,10 +11,11 @@ export default function NestedLoopClock() {
   const [running, setRunning] = useState(false);
   const [rows, setRows] = useState(5);
   const [starPattern, setStarPattern] = useState<string[]>([]);
+  const { scaledTimeout, scaledInterval } = useAnimationSpeed();
   // Clock animation
   useEffect(() => {
     if (!running) return;
-    const interval = setInterval(() => {
+    const cancelInterval = scaledInterval(() => {
       setMinute(prev => {
         if (prev >= 11) {
           setHour(h => {
@@ -28,8 +30,8 @@ export default function NestedLoopClock() {
         return prev + 1;
       });
     }, 150);
-    return () => clearInterval(interval);
-  }, [running]);
+    return () => cancelInterval();
+  }, [running, scaledInterval]);
 
   // Star pattern builder
   const buildPattern = useCallback(() => {
@@ -41,10 +43,10 @@ export default function NestedLoopClock() {
       }
       setStarPattern(prev => [...prev, '*'.repeat(row + 1)]);
       row++;
-      setTimeout(build, 400);
+      scaledTimeout(build, 400);
     };
     build();
-  }, [rows]);
+  }, [rows, scaledTimeout]);
 
   useEffect(() => {
     buildPattern();

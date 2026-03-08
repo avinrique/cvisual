@@ -5,22 +5,22 @@ import ConveyorBelt from '@/components/shared/ConveyorBelt';
 import Terminal from '@/components/shared/Terminal';
 import Narration from '@/components/shared/Narration';
 import { useTypewriter } from '@/components/hooks/useTypewriter';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 export default function ScanfReverse() {
   const [phase, setPhase] = useState(0);
-  // 0: conveyor + scanf label, 1: prompt prints, 2: keyboard types,
-  // 3: blue particle travels, 4: address zoom, 5: value drops in box
+  const { scaledTimeout } = useAnimationSpeed();
 
   useEffect(() => {
-    const t = [
-      setTimeout(() => setPhase(1), 1200),
-      setTimeout(() => setPhase(2), 2500),
-      setTimeout(() => setPhase(3), 4200),
-      setTimeout(() => setPhase(4), 5200),
-      setTimeout(() => setPhase(5), 6500),
+    const c = [
+      scaledTimeout(() => setPhase(1), 1200),
+      scaledTimeout(() => setPhase(2), 2500),
+      scaledTimeout(() => setPhase(3), 4200),
+      scaledTimeout(() => setPhase(4), 5200),
+      scaledTimeout(() => setPhase(5), 6500),
     ];
-    return () => t.forEach(clearTimeout);
-  }, []);
+    return () => c.forEach(fn => fn());
+  }, [scaledTimeout]);
 
   const typedValue = useTypewriter({
     text: '21',

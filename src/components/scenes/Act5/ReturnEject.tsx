@@ -3,20 +3,22 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BitCharacter from '@/components/shared/BitCharacter';
 import Narration from '@/components/shared/Narration';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 export default function ReturnEject() {
   const [phase, setPhase] = useState(0);
+  const { scaledTimeout } = useAnimationSpeed();
 
   useEffect(() => {
-    const timers = [
-      setTimeout(() => setPhase(1), 1500),
-      setTimeout(() => setPhase(2), 3500),
-      setTimeout(() => setPhase(3), 5000),
-      setTimeout(() => setPhase(4), 6500),
-      setTimeout(() => setPhase(5), 8000),
+    const cleanups = [
+      scaledTimeout(() => setPhase(1), 1500),
+      scaledTimeout(() => setPhase(2), 3500),
+      scaledTimeout(() => setPhase(3), 5000),
+      scaledTimeout(() => setPhase(4), 6500),
+      scaledTimeout(() => setPhase(5), 8000),
     ];
-    return () => timers.forEach(clearTimeout);
-  }, []);
+    return () => cleanups.forEach(fn => fn());
+  }, [scaledTimeout]);
 
   return (
     <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void">

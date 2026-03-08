@@ -3,10 +3,12 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Terminal from '@/components/shared/Terminal';
 import Narration from '@/components/shared/Narration';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 export default function BMICalculator() {
   const [phase, setPhase] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { scaledTimeout } = useAnimationSpeed();
 
   // Rube Goldberg chain: 0: funnels appear, 1: numbers drop in,
   // 2: roll down ramps, 3: height*height, 4: weight/height^2,
@@ -19,9 +21,9 @@ export default function BMICalculator() {
 
   useEffect(() => {
     const delays = [800, 2000, 3500, 5000, 6200, 7500, 8800];
-    const t = delays.map((d, i) => setTimeout(() => setPhase(i + 1), d));
-    return () => t.forEach(clearTimeout);
-  }, []);
+    const cleanups = delays.map((d, i) => scaledTimeout(() => setPhase(i + 1), d));
+    return () => cleanups.forEach(c => c());
+  }, [scaledTimeout]);
 
   return (
     <div

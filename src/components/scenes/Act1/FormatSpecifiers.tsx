@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ConveyorBelt from '@/components/shared/ConveyorBelt';
 import InteractiveIndicator from '@/components/shared/InteractiveIndicator';
 import Narration from '@/components/shared/Narration';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const MAILBOXES = [
   { spec: '%d', color: 'var(--accent-blue)', label: 'integer', flag: '#00BFFF' },
@@ -21,34 +22,34 @@ export default function FormatSpecifiers() {
   const [valueLiftoff, setValueLiftoff] = useState(false);
   const [valueDropped, setValueDropped] = useState(false);
   const [outputVisible, setOutputVisible] = useState(false);
+  const { scaledTimeout } = useAnimationSpeed();
 
   const currentValue = VALUES[valueIndex % VALUES.length];
 
-  // 0: mailboxes appear, 1: code + age box, 2: conveyor, 3: value lifts,
-  // 4: value drops in slot, 5: output, 6: interactive prompt
-
   useEffect(() => {
-    const t = [
-      setTimeout(() => setPhase(1), 1000),
-      setTimeout(() => setPhase(2), 2500),
-      setTimeout(() => setPhase(3), 3500),
+    const c = [
+      scaledTimeout(() => setPhase(1), 1000),
+      scaledTimeout(() => setPhase(2), 2500),
+      scaledTimeout(() => setPhase(3), 3500),
     ];
-    return () => t.forEach(clearTimeout);
-  }, []);
+    return () => c.forEach(fn => fn());
+  }, [scaledTimeout]);
 
   useEffect(() => {
     if (phase === 3) {
       setValueLiftoff(true);
-      setTimeout(() => {
+      const c1 = scaledTimeout(() => {
         setValueDropped(true);
         setValueLiftoff(false);
-        setTimeout(() => {
+        const c2 = scaledTimeout(() => {
           setOutputVisible(true);
-          setTimeout(() => setPhase(6), 1500);
+          scaledTimeout(() => setPhase(6), 1500);
         }, 800);
+        return c2;
       }, 1200);
+      return c1;
     }
-  }, [phase, animKey]);
+  }, [phase, animKey, scaledTimeout]);
 
   const handleReplay = useCallback(() => {
     setValueIndex((i) => i + 1);
@@ -56,10 +57,10 @@ export default function FormatSpecifiers() {
     setValueDropped(false);
     setOutputVisible(false);
     setAnimKey((k) => k + 1);
-    setTimeout(() => {
+    scaledTimeout(() => {
       setPhase(3);
     }, 300);
-  }, []);
+  }, [scaledTimeout]);
 
   const val = VALUES[(valueIndex + 1) % VALUES.length];
 

@@ -5,47 +5,47 @@ import Terminal from '@/components/shared/Terminal';
 import Narration from '@/components/shared/Narration';
 import { useTypewriter } from '@/components/hooks/useTypewriter';
 import { useAppStore } from '@/lib/store';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 export default function Opening() {
   const [phase, setPhase] = useState(0);
   const nextScene = useAppStore((s) => s.nextScene);
+  const { scaledTimeout } = useAnimationSpeed();
 
   // Phase 0: black, Phase 1: cursor, Phase 2: "Hello?", Phase 3: "Is anyone there?",
   // Phase 4: zoom out, Phase 5: narration, Phase 6: title, Phase 7: subtitle
 
   useEffect(() => {
-    const timers = [
-      setTimeout(() => setPhase(1), 1000),
-      setTimeout(() => setPhase(2), 2000),
-    ];
-    return () => timers.forEach(clearTimeout);
-  }, []);
+    const c1 = scaledTimeout(() => setPhase(1), 1000);
+    const c2 = scaledTimeout(() => setPhase(2), 2000);
+    return () => { c1(); c2(); };
+  }, [scaledTimeout]);
 
   const hello = useTypewriter({
     text: 'Hello?',
     speed: 200,
     delay: 0,
-    onComplete: () => setTimeout(() => setPhase(3), 600),
+    onComplete: () => scaledTimeout(() => setPhase(3), 600),
   });
 
   const question = useTypewriter({
     text: 'Is anyone there?',
     speed: 150,
     delay: 0,
-    onComplete: () => setTimeout(() => setPhase(4), 1200),
+    onComplete: () => scaledTimeout(() => setPhase(4), 1200),
   });
 
   useEffect(() => {
     if (phase === 4) {
-      setTimeout(() => setPhase(5), 1500);
+      return scaledTimeout(() => setPhase(5), 1500);
     }
     if (phase === 5) {
-      setTimeout(() => setPhase(6), 2000);
+      return scaledTimeout(() => setPhase(6), 2000);
     }
     if (phase === 6) {
-      setTimeout(() => setPhase(7), 1500);
+      return scaledTimeout(() => setPhase(7), 1500);
     }
-  }, [phase]);
+  }, [phase, scaledTimeout]);
 
   const titleText = 'THE MACHINE THAT LISTENS';
 

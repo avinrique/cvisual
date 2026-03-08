@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import BitCharacter from '@/components/shared/BitCharacter';
 import GlowBox from '@/components/shared/GlowBox';
 import InteractiveIndicator from '@/components/shared/InteractiveIndicator';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const TRACK_R = 120;
 const CX = 160;
@@ -24,6 +25,7 @@ export default function ForLoopTrack() {
   const [currentStation, setCurrentStation] = useState(0);
   const [exited, setExited] = useState(false);
   const [log, setLog] = useState<string[]>([]);
+  const { scaledTimeout } = useAnimationSpeed();
 
   const stations = [
     { label: `int i=${start}`, color: '#00BFFF', angle: stationAngles[0] },
@@ -55,7 +57,7 @@ export default function ForLoopTrack() {
       const pass = iteration <= end;
       setLog(prev => [...prev, `Check: i(${iteration}) <= ${end}? ${pass ? 'YES' : 'NO'}`]);
       if (!pass) {
-        setTimeout(() => setExited(true), 500);
+        scaledTimeout(() => setExited(true), 500);
       }
     } else if (currentStation === 1 && !exited) {
       // Execute body, move to UPDATE
@@ -68,16 +70,16 @@ export default function ForLoopTrack() {
       setLog(prev => [...prev, `i++ => i = ${next}`]);
       setCurrentStation(0);
       // Auto-advance to check
-      setTimeout(() => {
+      scaledTimeout(() => {
         setCurrentStation(1);
         const pass = next <= end;
         setLog(prev => [...prev, `Check: i(${next}) <= ${end}? ${pass ? 'YES' : 'NO'}`]);
         if (!pass) {
-          setTimeout(() => setExited(true), 500);
+          scaledTimeout(() => setExited(true), 500);
         }
       }, 600);
     }
-  }, [running, currentStation, iteration, start, end, exited]);
+  }, [running, currentStation, iteration, start, end, exited, scaledTimeout]);
 
   const bitPos = exited
     ? { x: CX + TRACK_R + 60, y: CY }

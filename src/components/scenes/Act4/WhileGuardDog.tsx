@@ -3,6 +3,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GlowBox from '@/components/shared/GlowBox';
 import InteractiveIndicator from '@/components/shared/InteractiveIndicator';
+import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
 
 const CORRECT_PASSWORD = '1234';
 
@@ -12,6 +13,7 @@ export default function WhileGuardDog() {
   const [dogState, setDogState] = useState<'idle' | 'bark' | 'wag'>('idle');
   const [doorOpen, setDoorOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { scaledTimeout } = useAnimationSpeed();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,10 +24,10 @@ export default function WhileGuardDog() {
 
     if (guess === CORRECT_PASSWORD) {
       setDogState('wag');
-      setTimeout(() => setDoorOpen(true), 800);
+      scaledTimeout(() => setDoorOpen(true), 800);
     } else {
       setDogState('bark');
-      setTimeout(() => setDogState('idle'), 1200);
+      scaledTimeout(() => setDogState('idle'), 1200);
     }
     setInput('');
   };
