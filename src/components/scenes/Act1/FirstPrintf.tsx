@@ -1,10 +1,10 @@
 'use client';
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CodeTyper from '@/components/shared/CodeTyper';
 import Terminal from '@/components/shared/Terminal';
-import Narration from '@/components/shared/Narration';
 import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
+import { useAppStore } from '@/lib/store';
 
 const HELLO_WORLD_CODE = `#include <stdio.h>
 
@@ -13,47 +13,82 @@ int main() {
     return 0;
 }`;
 
+// Phase 0: code auto-types (no arrow keys until done)
+// Phase 1: highlight #include + narration about stdio.h + tooltip
+// Phase 2: highlight int main() + narration
+// Phase 3: highlight printf + glow + narration
+// Phase 4: text flies to terminal + final narration
+
+const NARRATIONS: Record<number, string> = {
+  0: "Let's see what that looks like in real C code...",
+  1: 'First, we import the tools we need — stdio.h gives us printf.',
+  2: 'Every C program starts here — inside main.',
+  3: 'printf sends text from our code to the screen.',
+  4: "printf is C's megaphone — it shouts to the console whatever you put inside those quotes.",
+};
+
 export default function FirstPrintf() {
   const [phase, setPhase] = useState(0);
+  const [codeComplete, setCodeComplete] = useState(false);
   const [tooltip, setTooltip] = useState<string | null>(null);
   const [braceOpen, setBraceOpen] = useState(false);
   const [printfGlow, setPrintfGlow] = useState(false);
   const [textFlying, setTextFlying] = useState(false);
   const [terminalText, setTerminalText] = useState('');
   const [showNewline, setShowNewline] = useState(false);
+  const [activeHighlight, setActiveHighlight] = useState<number[]>([]);
   const { scaledTimeout } = useAnimationSpeed();
+  const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
 
-  // 0: code typing, follows line callbacks
-  // line 0: #include done -> tooltip
-  // line 2: { typed -> brace animation
-  // line 3: printf -> glow + megaphone
-  // after complete: text flies to terminal
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+  const codeCompleteRef = useRef(codeComplete);
+  codeCompleteRef.current = codeComplete;
 
-  const handleLineComplete = useCallback((lineIndex: number) => {
-    if (lineIndex === 0) {
+  // Arrow key handler — only works after code finishes typing
+  const stableStepHandler = useCallback(() => {
+    if (!codeCompleteRef.current) return true; // consume the key but do nothing while typing
+    if (phaseRef.current >= 4) return false;   // let scene advance
+    setPhase(prev => prev + 1);
+    return true;
+  }, []);
+
+  useEffect(() => {
+    setSceneStepHandler(stableStepHandler);
+    return () => setSceneStepHandler(null);
+  }, [setSceneStepHandler, stableStepHandler]);
+
+  // When CodeTyper finishes, mark code as complete
+  const handleCodeComplete = useCallback(() => {
+    setCodeComplete(true);
+  }, []);
+
+  // Phase-based side effects (triggered by arrow keys after typing done)
+  useEffect(() => {
+    if (phase === 1) {
       setTooltip('stdio.h = Standard Input/Output library. Gives us printf and scanf.');
-      scaledTimeout(() => setTooltip(null), 3000);
+      const cancelTooltip = scaledTimeout(() => setTooltip(null), 3000);
+      setActiveHighlight([0]);
+      return cancelTooltip;
     }
-    if (lineIndex === 2) {
+    if (phase === 2) {
+      setActiveHighlight([2]);
       setBraceOpen(true);
     }
-    if (lineIndex === 3) {
+    if (phase === 3) {
+      setActiveHighlight([3]);
       setPrintfGlow(true);
-      scaledTimeout(() => {
-        setTextFlying(true);
-        scaledTimeout(() => {
-          setTerminalText('Hello, World!');
-          setTextFlying(false);
-          setShowNewline(true);
-          scaledTimeout(() => setPhase(1), 1500);
-        }, 1500);
-      }, 1000);
     }
-  }, [scaledTimeout]);
-
-  const handleCodeComplete = useCallback(() => {
-    // code is done typing
-  }, []);
+    if (phase === 4) {
+      setTextFlying(true);
+      const cancelFlying = scaledTimeout(() => {
+        setTerminalText('Hello, World!');
+        setTextFlying(false);
+        setShowNewline(true);
+      }, 1500);
+      return cancelFlying;
+    }
+  }, [phase, scaledTimeout]);
 
   return (
     <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void">
@@ -63,11 +98,11 @@ export default function FirstPrintf() {
           <CodeTyper
             code={HELLO_WORLD_CODE}
             language="c"
-            speed={50}
-            delay={500}
-            onLineComplete={handleLineComplete}
+            speed={80}
+            delay={1500}
             onComplete={handleCodeComplete}
-            highlightLines={printfGlow ? [3] : []}
+            highlightLines={activeHighlight}
+            className="text-base"
           />
 
           {/* stdio.h tooltip */}
@@ -89,7 +124,7 @@ export default function FirstPrintf() {
           {/* Brace animation overlay */}
           {braceOpen && (
             <motion.div
-              className="absolute top-[88px] left-[108px] text-primary font-code text-sm origin-left pointer-events-none"
+              className="absolute top-[88px] left-[108px] text-primary font-code text-base origin-left pointer-events-none"
               initial={{ rotateZ: -90, opacity: 0.5 }}
               animate={{ rotateZ: 0, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 10 }}
@@ -186,9 +221,21 @@ export default function FirstPrintf() {
         </div>
       </div>
 
-      {phase >= 1 && (
-        <Narration text="printf is C's megaphone -- it shouts to the console whatever you put inside those quotes." />
-      )}
+      {/* Narration text — bigger for projector */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={phase}
+          className="absolute top-12 left-0 right-0 flex justify-center px-8"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        >
+          <p className="text-dim text-center text-2xl md:text-3xl font-body italic max-w-2xl leading-relaxed">
+            &ldquo;{NARRATIONS[phase]}&rdquo;
+          </p>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

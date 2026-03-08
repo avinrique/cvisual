@@ -7,6 +7,7 @@ interface UseTypewriterOptions {
   delay?: number;
   variableSpeed?: boolean;
   onComplete?: () => void;
+  enabled?: boolean;
 }
 
 export function useTypewriter({
@@ -15,6 +16,7 @@ export function useTypewriter({
   delay = 0,
   variableSpeed = true,
   onComplete,
+  enabled = true,
 }: UseTypewriterOptions) {
   const [displayText, setDisplayText] = useState('');
   const [isComplete, setIsComplete] = useState(false);
@@ -29,14 +31,14 @@ export function useTypewriter({
   }, []);
 
   useEffect(() => {
-    if (isComplete) return;
+    if (isComplete || !enabled) return;
 
     const startTimeout = setTimeout(() => {
       setIsStarted(true);
     }, delay);
 
     return () => clearTimeout(startTimeout);
-  }, [delay, isComplete]);
+  }, [delay, isComplete, enabled]);
 
   useEffect(() => {
     if (!isStarted || isComplete) return;

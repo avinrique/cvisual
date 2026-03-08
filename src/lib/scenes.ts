@@ -47,6 +47,13 @@ export const scenes: SceneConfig[] = [
     accentColor: 'var(--text-primary)',
   },
   {
+    id: 'data-types',
+    act: 1,
+    title: 'Variables & Data Types',
+    component: lazy(() => import('@/components/scenes/Act1/DataTypes')),
+    accentColor: 'var(--accent-green)',
+  },
+  {
     id: 'format-specifiers',
     act: 1,
     title: 'Format Specifiers',

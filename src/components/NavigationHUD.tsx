@@ -48,7 +48,7 @@ export default function NavigationHUD() {
             <motion.button
               key={act}
               onClick={() => goToScene(actFirstIndex[i])}
-              className={`text-[10px] px-2 py-1 rounded font-display tracking-wider transition-colors ${
+              className={`group flex items-center gap-2 text-[10px] px-2 py-1 rounded font-display tracking-wider transition-colors ${
                 isActive
                   ? 'bg-white/10 text-primary'
                   : 'text-dim hover:text-primary hover:bg-white/5'
@@ -57,6 +57,9 @@ export default function NavigationHUD() {
               title={actNames[act]}
             >
               {act === 0 ? '▸' : act === 6 ? '■' : `A${act}`}
+              <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 transition-all duration-300 text-[9px] text-dim">
+                {actNames[act]}
+              </span>
             </motion.button>
           );
         })}

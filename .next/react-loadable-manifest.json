@@ -23,6 +23,12 @@
       "static/chunks/_app-pages-browser_src_components_scenes_Act1_ConsoleExplained_tsx.js"
     ]
   },
+  "lib/scenes.ts -> @/components/scenes/Act1/DataTypes": {
+    "id": "lib/scenes.ts -> @/components/scenes/Act1/DataTypes",
+    "files": [
+      "static/chunks/_app-pages-browser_src_components_scenes_Act1_DataTypes_tsx.js"
+    ]
+  },
   "lib/scenes.ts -> @/components/scenes/Act1/FirstPrintf": {
     "id": "lib/scenes.ts -> @/components/scenes/Act1/FirstPrintf",
     "files": [

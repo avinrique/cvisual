@@ -1,28 +1,82 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Narration from '@/components/shared/Narration';
 import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
+import { useAppStore } from '@/lib/store';
+
+const TARGET_BUTTONS = ['7', '+', '3', '='] as const;
 
 export default function CalculatorDemo() {
   const [phase, setPhase] = useState(0);
+  const [inputStep, setInputStep] = useState(0); // 0=none, 1=7, 2=+, 3=3, 4==
+  const [pressedButton, setPressedButton] = useState<string | null>(null);
   const { scaledTimeout } = useAnimationSpeed();
+  const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
+  const stableStepHandler = useCallback(() => {
+    if (phaseRef.current >= 4) return false;
+    setPhase(prev => prev + 1);
+    return true;
+  }, []);
 
   useEffect(() => {
-    const c = [
-      scaledTimeout(() => setPhase(1), 1000),
-      scaledTimeout(() => setPhase(2), 2500),
-      scaledTimeout(() => setPhase(3), 4200),
-      scaledTimeout(() => setPhase(4), 5500),
-    ];
-    return () => c.forEach(fn => fn());
+    setSceneStepHandler(stableStepHandler);
+    return () => setSceneStepHandler(null);
+  }, [setSceneStepHandler, stableStepHandler]);
+
+  // Auto-start phase 1 after a brief delay
+  useEffect(() => {
+    const cancel = scaledTimeout(() => setPhase(1), 800);
+    return cancel;
   }, [scaledTimeout]);
+
+  // Button press sequence auto-plays when phase 1 starts
+  useEffect(() => {
+    if (phase !== 1) return;
+
+    const pressButton = (btn: string, step: number, delay: number) => {
+      return [
+        scaledTimeout(() => {
+          setPressedButton(btn);
+          setInputStep(step);
+        }, delay),
+        scaledTimeout(() => setPressedButton(null), delay + 200),
+      ];
+    };
+
+    const timers = [
+      ...pressButton('7', 1, 0),
+      ...pressButton('+', 2, 600),
+      ...pressButton('3', 3, 1200),
+      ...pressButton('=', 4, 1800),
+    ];
+
+    return () => timers.forEach(fn => fn());
+  }, [phase, scaledTimeout]);
+
+  // Display text based on inputStep and phase
+  const getDisplayText = () => {
+    if (phase >= 3) return null; // handled by AnimatePresence output
+    if (phase === 2) return '7 + 3';
+    switch (inputStep) {
+      case 1: return '7';
+      case 2: return '7 +';
+      case 3: return '7 + 3';
+      case 4: return '7 + 3';
+      default: return '';
+    }
+  };
 
   const pipelineStages = [
     { label: 'INPUT', color: 'var(--accent-blue)', active: phase >= 1 },
     { label: 'PROCESS', color: 'var(--accent-amber)', active: phase >= 2 },
     { label: 'OUTPUT', color: 'var(--accent-green)', active: phase >= 3 },
   ];
+
+  const isTargetButton = (btn: string) => TARGET_BUTTONS.includes(btn as typeof TARGET_BUTTONS[number]);
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-void">
@@ -55,7 +109,7 @@ export default function CalculatorDemo() {
                   className="font-code text-lg text-primary"
                   exit={{ opacity: 0 }}
                 >
-                  {phase >= 2 ? '7 + 3' : phase >= 1 ? '7 + 3' : ''}
+                  {getDisplayText()}
                 </motion.span>
               ) : (
                 <motion.span
@@ -71,19 +125,49 @@ export default function CalculatorDemo() {
             </AnimatePresence>
           </div>
 
-          {/* Button grid (decorative) */}
+          {/* Button grid */}
           <div className="grid grid-cols-4 gap-1.5 w-full">
             {['7', '8', '9', '/', '4', '5', '6', '*', '1', '2', '3', '-', '0', '.', '=', '+'].map(
-              (btn) => (
-                <div
-                  key={btn}
-                  className={`h-9 rounded-md border border-white/10 flex items-center justify-center text-xs font-code ${
-                    btn === '=' ? 'bg-amber/20 text-amber' : 'bg-white/5 text-dim'
-                  }`}
-                >
-                  {btn}
-                </div>
-              )
+              (btn) => {
+                const isTarget = isTargetButton(btn);
+                const isPressed = pressedButton === btn;
+                const isEquals = btn === '=';
+
+                if (isTarget) {
+                  return (
+                    <motion.div
+                      key={btn}
+                      className={`h-9 rounded-md border border-white/10 flex items-center justify-center text-xs font-code ${
+                        isEquals ? 'text-amber' : 'text-dim'
+                      }`}
+                      animate={{
+                        scale: isPressed ? 0.85 : 1,
+                        backgroundColor: isPressed
+                          ? isEquals
+                            ? 'rgba(245, 158, 11, 0.4)'
+                            : 'rgba(96, 165, 250, 0.3)'
+                          : isEquals
+                            ? 'rgba(245, 158, 11, 0.2)'
+                            : 'rgba(255, 255, 255, 0.05)',
+                      }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                    >
+                      {btn}
+                    </motion.div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={btn}
+                    className={`h-9 rounded-md border border-white/10 flex items-center justify-center text-xs font-code ${
+                      isEquals ? 'bg-amber/20 text-amber' : 'bg-white/5 text-dim'
+                    }`}
+                  >
+                    {btn}
+                  </div>
+                );
+              }
             )}
           </div>
 
@@ -193,9 +277,27 @@ export default function CalculatorDemo() {
         </motion.div>
       )}
 
-      {phase >= 4 && (
-        <Narration text="Input. Process. Output. Every program is a calculator at heart." />
-      )}
+      <AnimatePresence mode="wait">
+        {phase >= 1 && phase <= 4 && (
+          <motion.div
+            key={phase <= 3 ? phase : 'final'}
+            className="absolute top-12 left-0 right-0 flex justify-center px-8"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+          >
+            <p className="text-dim text-center text-xl md:text-2xl font-body italic max-w-2xl leading-relaxed">
+              &ldquo;{
+                phase === 1 ? "We give the calculator input — numbers and an operation..." :
+                phase === 2 ? "The calculator processes our input..." :
+                phase === 3 ? "And produces output — the answer!" :
+                "Input. Process. Output. Every program is a calculator at heart."
+              }&rdquo;
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
