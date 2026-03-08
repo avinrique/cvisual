@@ -1,11 +1,22 @@
 import { create } from 'zustand';
 
+let lastNavTime = 0;
+const NAV_DEBOUNCE_MS = 300;
+
+function canNavigate(): boolean {
+  const now = Date.now();
+  if (now - lastNavTime < NAV_DEBOUNCE_MS) return false;
+  lastNavTime = now;
+  return true;
+}
+
 interface AppState {
   currentSceneIndex: number;
   totalScenes: number;
   pipelineHUDVisible: boolean;
   audioEnabled: boolean;
   isTransitioning: boolean;
+  animationSpeed: number;
 
   nextScene: () => void;
   prevScene: () => void;
@@ -13,6 +24,7 @@ interface AppState {
   showPipelineHUD: () => void;
   toggleAudio: () => void;
   setTransitioning: (v: boolean) => void;
+  setAnimationSpeed: (speed: number) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -21,8 +33,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   pipelineHUDVisible: false,
   audioEnabled: false,
   isTransitioning: false,
+  animationSpeed: 1,
 
   nextScene: () => {
+    if (!canNavigate()) return;
     const { currentSceneIndex, totalScenes } = get();
     if (currentSceneIndex < totalScenes - 1) {
       set({ currentSceneIndex: currentSceneIndex + 1 });
@@ -30,6 +44,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   prevScene: () => {
+    if (!canNavigate()) return;
     const { currentSceneIndex } = get();
     if (currentSceneIndex > 0) {
       set({ currentSceneIndex: currentSceneIndex - 1 });
@@ -46,4 +61,5 @@ export const useAppStore = create<AppState>((set, get) => ({
   showPipelineHUD: () => set({ pipelineHUDVisible: true }),
   toggleAudio: () => set(s => ({ audioEnabled: !s.audioEnabled })),
   setTransitioning: (v) => set({ isTransitioning: v }),
+  setAnimationSpeed: (speed) => set({ animationSpeed: speed }),
 }));

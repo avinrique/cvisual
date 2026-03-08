@@ -20,6 +20,7 @@ export default function LightSwitch() {
 
   return (
     <div
+      data-interactive
       className="w-full h-full relative overflow-hidden flex items-center justify-center transition-all duration-700"
       style={{
         background: isOn
@@ -96,7 +97,7 @@ export default function LightSwitch() {
         <div className="relative" style={{ perspective: '600px' }}>
           <motion.div
             className="relative cursor-pointer select-none"
-            onClick={() => setIsOn(!isOn)}
+            onClick={(e) => { e.stopPropagation(); setIsOn(!isOn); }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             style={{ transformStyle: 'preserve-3d' }}

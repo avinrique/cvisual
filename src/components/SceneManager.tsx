@@ -5,13 +5,13 @@ import { scenes } from '@/lib/scenes';
 import { useAppStore } from '@/lib/store';
 import NavigationHUD from './NavigationHUD';
 import PipelineHUD from './PipelineHUD';
+import SpeedControl from './SpeedControl';
 
 export default function SceneManager() {
   const containerRef = useRef<HTMLDivElement>(null);
   const currentSceneIndex = useAppStore(s => s.currentSceneIndex);
   const nextScene = useAppStore(s => s.nextScene);
   const prevScene = useAppStore(s => s.prevScene);
-  const setTransitioning = useAppStore(s => s.setTransitioning);
   const totalScenes = scenes.length;
 
   // Set total scenes on mount + auto-focus
@@ -89,21 +89,11 @@ export default function SceneManager() {
       ref={containerRef}
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      onClick={(e) => {
-        // Click anywhere (except buttons/inputs/interactive elements) to advance
-        const target = e.target as HTMLElement;
-        if (
-          target.closest('button') ||
-          target.closest('input') ||
-          target.closest('textarea') ||
-          target.closest('[data-interactive]')
-        ) return;
-        nextScene();
-      }}
-      className="relative w-screen h-screen overflow-hidden bg-void outline-none cursor-pointer"
+      className="relative w-screen h-screen overflow-hidden bg-void outline-none"
     >
       <NavigationHUD />
       <PipelineHUD />
+      <SpeedControl />
 
       <AnimatePresence mode="wait">
         <motion.div

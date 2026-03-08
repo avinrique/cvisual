@@ -84,7 +84,7 @@ export default function ForLoopTrack() {
     : angleToXY(stations[currentStation]?.angle ?? -90);
 
   return (
-    <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void">
+    <div data-interactive className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void">
       <div className="flex flex-col lg:flex-row items-center gap-8 px-4">
         {/* Track */}
         <div className="relative" style={{ width: 320, height: 320 }}>
@@ -153,14 +153,14 @@ export default function ForLoopTrack() {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={stepThrough}
+                  onClick={(e) => { e.stopPropagation(); stepThrough(); }}
                   disabled={exited}
                   className="flex-1 px-3 py-1.5 rounded text-xs font-code bg-blue/20 border border-blue/40 text-blue hover:bg-blue/30 disabled:opacity-30 transition"
                 >
                   {!running ? 'Start' : 'Step'}
                 </button>
                 <button
-                  onClick={reset}
+                  onClick={(e) => { e.stopPropagation(); reset(); }}
                   className="px-3 py-1.5 rounded text-xs font-code bg-surface border border-white/10 text-dim hover:text-primary transition"
                 >
                   Reset

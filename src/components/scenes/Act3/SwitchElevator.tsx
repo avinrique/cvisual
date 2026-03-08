@@ -82,6 +82,7 @@ export default function SwitchElevator() {
 
   return (
     <div
+      data-interactive
       className="w-full h-full relative overflow-hidden flex items-center justify-center gap-8 p-6"
       style={{ background: 'linear-gradient(180deg, #0a0c18 0%, #101428 50%, #0a0c18 100%)' }}
     >
@@ -111,7 +112,7 @@ export default function SwitchElevator() {
                     color: isActive ? '#FFD700' : 'rgba(255,255,255,0.5)',
                     boxShadow: isActive ? '0 0 15px rgba(255,215,0,0.3)' : 'none',
                   }}
-                  onClick={() => setSelectedOp(floor.op)}
+                  onClick={(e) => { e.stopPropagation(); setSelectedOp(floor.op); }}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                 >
@@ -242,7 +243,7 @@ export default function SwitchElevator() {
               borderColor: hasBreak ? '#22C55E' : '#EF4444',
               background: hasBreak ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
             }}
-            onClick={() => setHasBreak(!hasBreak)}
+            onClick={(e) => { e.stopPropagation(); setHasBreak(!hasBreak); }}
             whileTap={{ scale: 0.95 }}
           >
             <motion.div

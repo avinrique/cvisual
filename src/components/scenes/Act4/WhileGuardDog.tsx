@@ -76,7 +76,7 @@ export default function WhileGuardDog() {
   );
 
   return (
-    <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void px-4">
+    <div data-interactive className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void px-4">
       <div className="flex flex-col lg:flex-row items-center gap-10 max-w-4xl">
         {/* Door scene */}
         <div className="relative flex flex-col items-center">

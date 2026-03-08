@@ -41,6 +41,7 @@ export default function ElseIfStaircase() {
 
   return (
     <div
+      data-interactive
       className="w-full h-full relative overflow-hidden flex flex-col items-center justify-center gap-4 p-6"
       style={{ background: 'linear-gradient(180deg, #0c0e1e 0%, #141830 50%, #0c0e1e 100%)' }}
     >

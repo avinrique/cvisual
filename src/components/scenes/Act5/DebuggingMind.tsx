@@ -19,7 +19,7 @@ export default function DebuggingMind() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-void px-4">
+    <div data-interactive className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-void px-4">
       <motion.h2
         className="font-display text-xl mb-8"
         style={{ color: '#FFD700' }}
@@ -43,7 +43,7 @@ export default function DebuggingMind() {
         {/* Door 1: Bug (assignment) */}
         <motion.div
           className="flex flex-col items-center cursor-pointer"
-          onClick={() => !choice && handlePick(1)}
+          onClick={(e) => { e.stopPropagation(); if (!choice) handlePick(1); }}
           whileHover={!choice ? { scale: 1.05 } : {}}
           whileTap={!choice ? { scale: 0.95 } : {}}
         >
@@ -93,7 +93,7 @@ export default function DebuggingMind() {
         {/* Door 2: Correct (comparison) */}
         <motion.div
           className="flex flex-col items-center cursor-pointer"
-          onClick={() => !choice && handlePick(2)}
+          onClick={(e) => { e.stopPropagation(); if (!choice) handlePick(2); }}
           whileHover={!choice ? { scale: 1.05 } : {}}
           whileTap={!choice ? { scale: 0.95 } : {}}
         >
@@ -184,7 +184,7 @@ export default function DebuggingMind() {
             </div>
 
             <button
-              onClick={reset}
+              onClick={(e) => { e.stopPropagation(); reset(); }}
               className="px-4 py-1.5 rounded text-xs font-code bg-surface border border-white/10 text-dim hover:text-primary transition"
             >
               Try Again

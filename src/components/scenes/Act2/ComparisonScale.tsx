@@ -6,7 +6,14 @@ import InteractiveIndicator from '@/components/shared/InteractiveIndicator';
 import Narration from '@/components/shared/Narration';
 type Op = '==' | '!=' | '>' | '<' | '>=' | '<=';
 
-const OPERATORS: Op[] = ['==', '!=', '>', '<', '>=', '<='];
+const OPERATORS: { op: Op; label: string }[] = [
+  { op: '==', label: 'equals' },
+  { op: '!=', label: 'not equals' },
+  { op: '>', label: 'greater than' },
+  { op: '<', label: 'less than' },
+  { op: '>=', label: 'greater or equal' },
+  { op: '<=', label: 'less or equal' },
+];
 
 function evaluate(a: number, op: Op, b: number): boolean {
   switch (op) {
@@ -47,16 +54,17 @@ if (a ${selectedOp} b) {
 
   return (
     <div
+      data-interactive
       className="w-full h-full relative overflow-hidden flex flex-col items-center justify-center gap-6"
       style={{ background: 'radial-gradient(ellipse at 50% 40%, #141830 0%, #0a0e1a 100%)' }}
     >
       {/* Operator buttons */}
       <div className="flex gap-3 flex-wrap justify-center">
-        {OPERATORS.map(op => (
+        {OPERATORS.map(({ op, label }) => (
           <motion.button
             key={op}
-            onClick={() => handleChange(op)}
-            className="px-5 py-2 rounded-lg font-code text-lg border transition-all"
+            onClick={(e) => { e.stopPropagation(); handleChange(op); }}
+            className="px-4 py-2 rounded-lg border transition-all flex flex-col items-center gap-1"
             style={{
               background: selectedOp === op ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.05)',
               borderColor: selectedOp === op ? '#FFD700' : 'rgba(255,255,255,0.1)',
@@ -65,7 +73,8 @@ if (a ${selectedOp} b) {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
-            {op}
+            <span className="font-code text-lg">{op}</span>
+            <span className="text-[10px] font-body opacity-60">{label}</span>
           </motion.button>
         ))}
       </div>

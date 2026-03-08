@@ -57,6 +57,7 @@ if (!isLoggedIn) {
 
   return (
     <div
+      data-interactive
       className="w-full h-full relative overflow-hidden flex flex-col items-center justify-center gap-6 p-6"
       style={{ background: 'radial-gradient(ellipse at 50% 50%, #111835 0%, #080c1a 100%)' }}
     >
@@ -65,7 +66,7 @@ if (!isLoggedIn) {
         {(['AND', 'OR', 'NOT'] as GateType[]).map(gate => (
           <motion.button
             key={gate}
-            onClick={() => { setActiveGate(gate); setInputA(true); setInputB(true); }}
+            onClick={(e) => { e.stopPropagation(); setActiveGate(gate); setInputA(true); setInputB(true); }}
             className="px-6 py-2 rounded-lg font-display text-sm border transition-all"
             style={{
               background: activeGate === gate ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.03)',
@@ -123,7 +124,7 @@ if (!isLoggedIn) {
                       color: inputA ? '#22C55E' : '#EF4444',
                       background: inputA ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
                     }}
-                    onClick={() => setInputA(!inputA)}
+                    onClick={(e) => { e.stopPropagation(); setInputA(!inputA); }}
                     whileTap={{ scale: 0.9 }}
                   >
                     Toggle A ({inputA ? '1' : '0'})
@@ -160,7 +161,7 @@ if (!isLoggedIn) {
                       color: inputB ? '#22C55E' : '#EF4444',
                       background: inputB ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
                     }}
-                    onClick={() => setInputB(!inputB)}
+                    onClick={(e) => { e.stopPropagation(); setInputB(!inputB); }}
                     whileTap={{ scale: 0.9 }}
                   >
                     Toggle B ({inputB ? '1' : '0'})
@@ -204,7 +205,7 @@ if (!isLoggedIn) {
                       borderColor: inputA ? '#22C55E' : '#EF4444',
                       background: inputA ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.08)',
                     }}
-                    onClick={() => setInputA(!inputA)}
+                    onClick={(e) => { e.stopPropagation(); setInputA(!inputA); }}
                   >
                     <span className="font-code text-xs" style={{ color: inputA ? '#22C55E' : '#EF4444' }}>Path A</span>
                     <span className="font-code text-lg font-bold" style={{ color: inputA ? '#22C55E' : '#EF4444' }}>
@@ -222,7 +223,7 @@ if (!isLoggedIn) {
                       borderColor: inputB ? '#22C55E' : '#EF4444',
                       background: inputB ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.08)',
                     }}
-                    onClick={() => setInputB(!inputB)}
+                    onClick={(e) => { e.stopPropagation(); setInputB(!inputB); }}
                   >
                     <span className="font-code text-xs" style={{ color: inputB ? '#22C55E' : '#EF4444' }}>Path B</span>
                     <span className="font-code text-lg font-bold" style={{ color: inputB ? '#22C55E' : '#EF4444' }}>
@@ -267,7 +268,7 @@ if (!isLoggedIn) {
                     color: inputA ? '#22C55E' : '#EF4444',
                     background: inputA ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
                   }}
-                  onClick={() => setInputA(!inputA)}
+                  onClick={(e) => { e.stopPropagation(); setInputA(!inputA); }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >

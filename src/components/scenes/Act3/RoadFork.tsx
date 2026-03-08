@@ -19,6 +19,7 @@ if (age >= 18) {
 
   return (
     <div
+      data-interactive
       className="w-full h-full relative overflow-hidden flex flex-col items-center justify-center"
       style={{ background: 'linear-gradient(180deg, #0c1020 0%, #141e30 50%, #0c1020 100%)' }}
     >

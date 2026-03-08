@@ -57,7 +57,7 @@ export default function NestedLoopClock() {
   const CCY = 110;
 
   return (
-    <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void px-4">
+    <div data-interactive className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void px-4">
       <div className="flex flex-col lg:flex-row items-center gap-10 max-w-4xl">
         {/* Clock */}
         <div className="flex flex-col items-center gap-4">
@@ -121,7 +121,7 @@ export default function NestedLoopClock() {
           </div>
 
           <button
-            onClick={() => { setHour(0); setMinute(0); setRunning(true); }}
+            onClick={(e) => { e.stopPropagation(); setHour(0); setMinute(0); setRunning(true); }}
             disabled={running}
             className="px-4 py-1.5 rounded text-xs font-code bg-gold/20 border border-gold/40 text-amber hover:bg-gold/30 disabled:opacity-30 transition"
           >

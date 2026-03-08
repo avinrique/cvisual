@@ -64,7 +64,7 @@ export default function FormatSpecifiers() {
   const val = VALUES[(valueIndex + 1) % VALUES.length];
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-void gap-8">
+    <div data-interactive className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-void gap-8">
       {/* Mailboxes row */}
       <motion.div
         className="flex gap-6"
@@ -207,7 +207,7 @@ export default function FormatSpecifiers() {
         >
           <motion.button
             className="px-6 py-2 rounded-lg border border-blue/40 text-blue font-display text-sm tracking-wider hover:bg-blue/10 transition-colors"
-            onClick={handleReplay}
+            onClick={(e) => { e.stopPropagation(); handleReplay(); }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >

@@ -55,16 +55,18 @@ export default function BMICalculator() {
               weight
             </span>
           </div>
-          {/* Number dropping */}
-          {phase >= 1 && (
+          {/* Number dropping — stays visible until phase 5, animates to divide box at phase 4 */}
+          {/* Funnel is at left:64px. Divide box is at left:265px top:265px (80x64). */}
+          {/* Relative to funnel origin: divide box center ≈ x:241 y:297 */}
+          {phase >= 1 && phase < 5 && (
             <motion.div
               className="absolute font-code text-lg text-blue font-bold"
               style={{ textShadow: '0 0 10px var(--glow-blue)' }}
               initial={{ y: -20, opacity: 1 }}
               animate={{
-                y: phase >= 2 ? 120 : 30,
-                x: phase >= 2 ? 60 : 0,
-                opacity: phase >= 4 ? 0 : 1,
+                y: phase >= 4 ? 285 : phase >= 2 ? 120 : 30,
+                x: phase >= 4 ? 225 : phase >= 2 ? 60 : 0,
+                opacity: 1,
               }}
               transition={{ duration: 1.2, ease: 'easeIn' }}
             >
@@ -116,14 +118,12 @@ export default function BMICalculator() {
           animate={{ opacity: 0.5 }}
           transition={{ delay: 0.3 }}
         >
-          {/* Left ramp from weight funnel */}
-          <line x1="130" y1="60" x2="250" y2="180" stroke="var(--accent-blue)" strokeWidth="1.5" strokeDasharray="4 4" />
-          {/* Right ramp from height funnel */}
-          <line x1="470" y1="60" x2="350" y2="180" stroke="var(--accent-green)" strokeWidth="1.5" strokeDasharray="4 4" />
-          {/* Down to multiply */}
-          <line x1="350" y1="180" x2="350" y2="230" stroke="var(--accent-amber)" strokeWidth="1.5" strokeDasharray="4 4" />
-          {/* Down to divide */}
-          <line x1="300" y1="250" x2="300" y2="300" stroke="var(--accent-gold)" strokeWidth="1.5" strokeDasharray="4 4" />
+          {/* Left ramp from weight funnel to divide box */}
+          <line x1="130" y1="60" x2="305" y2="290" stroke="var(--accent-blue)" strokeWidth="1.5" strokeDasharray="4 4" />
+          {/* Right ramp from height funnel to multiply box */}
+          <line x1="470" y1="60" x2="320" y2="180" stroke="var(--accent-green)" strokeWidth="1.5" strokeDasharray="4 4" />
+          {/* Down from multiply to divide */}
+          <line x1="320" y1="200" x2="305" y2="270" stroke="var(--accent-amber)" strokeWidth="1.5" strokeDasharray="4 4" />
         </motion.svg>
 
         {/* Multiply box: height * height */}
