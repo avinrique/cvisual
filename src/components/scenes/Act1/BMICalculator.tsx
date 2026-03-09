@@ -1,18 +1,52 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Terminal from '@/components/shared/Terminal';
 import Narration from '@/components/shared/Narration';
 import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
+
+// Phase 0: funnels + code panel appear
+// Phase 1: height drops into funnel
+// Phase 2: height rolls to multiply box
+// Phase 3: multiply glows — result appears in RESULT BOX between multiply & divide
+// Phase 4: weight drops into its funnel (only NOW)
+// Phase 5: weight rolls down, heightSquared moves from result box into divide box
+// Phase 6: divide glows — BMI result drops out below divide
+// Phase 7: printf line + terminal output (no overlap)
+
+const BMI_CODE = [
+  { text: '#include <stdio.h>', colored: [{ text: '#include <stdio.h>', color: 'var(--accent-purple)' }] },
+  { text: '' },
+  { text: 'int main() {', colored: [{ text: 'int', color: 'var(--accent-blue)' }, { text: ' main() {', color: 'var(--text-dim)' }] },
+  { text: '    float weight, height, bmi;', colored: [{ text: '    ', color: '' }, { text: 'float', color: 'var(--accent-green)' }, { text: ' weight, height, bmi;', color: 'var(--text-dim)' }] },
+  { text: '', colored: [] },
+  { text: '    printf("Enter weight: ");', colored: [{ text: '    ', color: '' }, { text: 'printf', color: 'var(--accent-gold)' }, { text: '(', color: 'var(--text-dim)' }, { text: '"Enter weight: "', color: 'var(--accent-green)' }, { text: ');', color: 'var(--text-dim)' }] },
+  { text: '    scanf("%f", &weight);', colored: [{ text: '    ', color: '' }, { text: 'scanf', color: 'var(--accent-gold)' }, { text: '(', color: 'var(--text-dim)' }, { text: '"%f"', color: 'var(--accent-green)' }, { text: ', &weight);', color: 'var(--text-dim)' }] },
+  { text: '    printf("Enter height: ");', colored: [{ text: '    ', color: '' }, { text: 'printf', color: 'var(--accent-gold)' }, { text: '(', color: 'var(--text-dim)' }, { text: '"Enter height: "', color: 'var(--accent-green)' }, { text: ');', color: 'var(--text-dim)' }] },
+  { text: '    scanf("%f", &height);', colored: [{ text: '    ', color: '' }, { text: 'scanf', color: 'var(--accent-gold)' }, { text: '(', color: 'var(--text-dim)' }, { text: '"%f"', color: 'var(--accent-green)' }, { text: ', &height);', color: 'var(--text-dim)' }] },
+  { text: '', colored: [] },
+  { text: '    bmi = weight / (height * height);', colored: [{ text: '    bmi ', color: 'var(--text-primary)' }, { text: '= ', color: 'var(--text-dim)' }, { text: 'weight', color: 'var(--accent-blue)' }, { text: ' / (', color: 'var(--text-dim)' }, { text: 'height', color: 'var(--accent-green)' }, { text: ' * ', color: 'var(--text-dim)' }, { text: 'height', color: 'var(--accent-green)' }, { text: ');', color: 'var(--text-dim)' }] },
+  { text: '    printf("BMI: %.1f\\n", bmi);', colored: [{ text: '    ', color: '' }, { text: 'printf', color: 'var(--accent-gold)' }, { text: '(', color: 'var(--text-dim)' }, { text: '"BMI: %.1f\\n"', color: 'var(--accent-green)' }, { text: ', bmi);', color: 'var(--text-dim)' }] },
+  { text: '', colored: [] },
+  { text: '    return 0;', colored: [{ text: '    ', color: '' }, { text: 'return', color: 'var(--accent-purple)' }, { text: ' 0;', color: 'var(--text-dim)' }] },
+  { text: '}', colored: [{ text: '}', color: 'var(--text-dim)' }] },
+];
+
+// Map phase to highlighted code line index
+const PHASE_TO_LINE: Record<number, number> = {
+  1: 7,  // scanf height
+  2: 7,
+  3: 10, // bmi = weight / (height * height) — multiply part
+  4: 5,  // scanf weight
+  5: 10, // bmi = ... — divide part
+  6: 10,
+  7: 11, // printf
+};
 
 export default function BMICalculator() {
   const [phase, setPhase] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const { scaledTimeout } = useAnimationSpeed();
-
-  // Rube Goldberg chain: 0: funnels appear, 1: numbers drop in,
-  // 2: roll down ramps, 3: height*height, 4: weight/height^2,
-  // 5: BMI drops out, 6: printf catches, 7: terminal shows
 
   const weight = 70;
   const height = 1.75;
@@ -20,242 +54,359 @@ export default function BMICalculator() {
   const bmi = +(weight / heightSquared).toFixed(1);
 
   useEffect(() => {
-    const delays = [800, 2000, 3500, 5000, 6200, 7500, 8800];
+    const delays = [800, 2200, 3800, 6000, 7800, 9500, 11000];
     const cleanups = delays.map((d, i) => scaledTimeout(() => setPhase(i + 1), d));
     return () => cleanups.forEach(c => c());
   }, [scaledTimeout]);
 
+  const highlightLine = PHASE_TO_LINE[phase] ?? -1;
+
   return (
     <div
       ref={containerRef}
-      className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-void"
+      className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void"
     >
       {/* Title */}
-      <motion.h2
-        className="absolute top-8 font-display text-lg text-amber tracking-wider"
+      <motion.div
+        className="absolute top-6 left-0 right-0 text-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
-        BMI = weight / (height * height)
-      </motion.h2>
+        <span className="font-display text-xs text-dim tracking-widest uppercase">BMI Calculator</span>
+        <h2 className="font-display text-lg text-amber tracking-wider mt-1">
+          BMI = weight / (height × height)
+        </h2>
+      </motion.div>
 
-      {/* Machine visualization */}
-      <div className="relative w-[600px] h-[400px]">
-        {/* Two funnels at top */}
-        <motion.div
-          className="absolute left-16 top-0 flex flex-col items-center"
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Weight funnel */}
-          <div className="relative">
-            <svg width="80" height="60" viewBox="0 0 80 60">
-              <path d="M10 0 L70 0 L50 60 L30 60 Z" fill="none" stroke="var(--accent-blue)" strokeWidth="2" />
-            </svg>
-            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-blue font-code text-xs">
-              weight
-            </span>
-          </div>
-          {/* Number dropping — stays visible until phase 5, animates to divide box at phase 4 */}
-          {/* Funnel is at left:64px. Divide box is at left:265px top:265px (80x64). */}
-          {/* Relative to funnel origin: divide box center ≈ x:241 y:297 */}
-          {phase >= 1 && phase < 5 && (
+      <div className="flex items-start gap-8 px-8 max-w-6xl w-full mt-8">
+        {/* Left side — Machine visualization */}
+        <div className="flex-1 flex flex-col items-center">
+          <div className="relative w-[500px] h-[360px]">
+            {/* Weight funnel — left */}
             <motion.div
-              className="absolute font-code text-lg text-blue font-bold"
-              style={{ textShadow: '0 0 10px var(--glow-blue)' }}
-              initial={{ y: -20, opacity: 1 }}
-              animate={{
-                y: phase >= 4 ? 285 : phase >= 2 ? 120 : 30,
-                x: phase >= 4 ? 225 : phase >= 2 ? 60 : 0,
-                opacity: 1,
-              }}
-              transition={{ duration: 1.2, ease: 'easeIn' }}
+              className="absolute left-8 top-0 flex flex-col items-center"
+              initial={{ opacity: 0, y: -30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
             >
-              {weight}
-            </motion.div>
-          )}
-        </motion.div>
+              <div className="relative">
+                <svg width="70" height="50" viewBox="0 0 80 60">
+                  <path d="M10 0 L70 0 L50 60 L30 60 Z" fill="none" stroke="var(--accent-blue)" strokeWidth="2" />
+                </svg>
+                <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-blue font-code text-xs">
+                  weight
+                </span>
+              </div>
 
-        <motion.div
-          className="absolute right-16 top-0 flex flex-col items-center"
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          {/* Height funnel */}
-          <div className="relative">
-            <svg width="80" height="60" viewBox="0 0 80 60">
-              <path d="M10 0 L70 0 L50 60 L30 60 Z" fill="none" stroke="var(--accent-green)" strokeWidth="2" />
-            </svg>
-            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-green font-code text-xs">
-              height
-            </span>
-          </div>
-          {/* Number dropping */}
-          {phase >= 1 && (
+              {/* Weight number — only appears at phase 4, rolls to divide at phase 5 */}
+              {phase >= 4 && phase < 6 && (
+                <motion.div
+                  className="absolute font-code text-lg text-blue font-bold z-10"
+                  style={{ textShadow: '0 0 10px var(--glow-blue)' }}
+                  initial={{ y: -20, opacity: 0 }}
+                  animate={{
+                    y: phase >= 5 ? 235 : 30,
+                    x: phase >= 5 ? 195 : 0,
+                    opacity: 1,
+                  }}
+                  transition={{ duration: 1.2, ease: 'easeIn' }}
+                >
+                  {weight}
+                </motion.div>
+              )}
+            </motion.div>
+
+            {/* Height funnel — right */}
             <motion.div
-              className="absolute font-code text-lg text-green font-bold"
-              style={{ textShadow: '0 0 10px var(--glow-green)' }}
-              initial={{ y: -20, opacity: 1 }}
-              animate={{
-                y: phase >= 2 ? 120 : 30,
-                x: phase >= 2 ? -60 : 0,
-                opacity: phase >= 3 ? 0 : 1,
-              }}
-              transition={{ duration: 1.2, ease: 'easeIn' }}
+              className="absolute right-8 top-0 flex flex-col items-center"
+              initial={{ opacity: 0, y: -30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
             >
-              {height}
+              <div className="relative">
+                <svg width="70" height="50" viewBox="0 0 80 60">
+                  <path d="M10 0 L70 0 L50 60 L30 60 Z" fill="none" stroke="var(--accent-green)" strokeWidth="2" />
+                </svg>
+                <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-green font-code text-xs">
+                  height
+                </span>
+              </div>
+              {/* Height number — drops phase 1, rolls to multiply phase 2, consumed phase 3 */}
+              {phase >= 1 && phase < 3 && (
+                <motion.div
+                  className="absolute font-code text-lg text-green font-bold"
+                  style={{ textShadow: '0 0 10px var(--glow-green)' }}
+                  initial={{ y: -20, opacity: 1 }}
+                  animate={{
+                    y: phase >= 2 ? 95 : 25,
+                    x: phase >= 2 ? -75 : 0,
+                    opacity: 1,
+                  }}
+                  transition={{ duration: 1.2, ease: 'easeIn' }}
+                >
+                  {height}
+                </motion.div>
+              )}
             </motion.div>
-          )}
-        </motion.div>
 
-        {/* Ramps (diagonal lines) */}
-        <motion.svg
-          className="absolute inset-0"
-          width="600"
-          height="400"
-          viewBox="0 0 600 400"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.5 }}
-          transition={{ delay: 0.3 }}
-        >
-          {/* Left ramp from weight funnel to divide box */}
-          <line x1="130" y1="60" x2="305" y2="290" stroke="var(--accent-blue)" strokeWidth="1.5" strokeDasharray="4 4" />
-          {/* Right ramp from height funnel to multiply box */}
-          <line x1="470" y1="60" x2="320" y2="180" stroke="var(--accent-green)" strokeWidth="1.5" strokeDasharray="4 4" />
-          {/* Down from multiply to divide */}
-          <line x1="320" y1="200" x2="305" y2="270" stroke="var(--accent-amber)" strokeWidth="1.5" strokeDasharray="4 4" />
-        </motion.svg>
+            {/* Ramps */}
+            <motion.svg
+              className="absolute inset-0"
+              width="500"
+              height="360"
+              viewBox="0 0 500 360"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.4 }}
+              transition={{ delay: 0.3 }}
+            >
+              {/* Right ramp: height funnel → multiply */}
+              <line x1="400" y1="50" x2="275" y2="120" stroke="var(--accent-green)" strokeWidth="1.5" strokeDasharray="4 4" />
+              {/* Multiply → result box */}
+              <line x1="260" y1="155" x2="260" y2="180" stroke="var(--accent-amber)" strokeWidth="1.5" strokeDasharray="4 4" />
+              {/* Result box → divide */}
+              <line x1="260" y1="225" x2="245" y2="245" stroke="var(--accent-amber)" strokeWidth="1.5" strokeDasharray="4 4" />
+              {/* Left ramp: weight funnel → divide */}
+              <line x1="80" y1="50" x2="225" y2="250" stroke="var(--accent-blue)" strokeWidth="1.5" strokeDasharray="4 4" />
+            </motion.svg>
 
-        {/* Multiply box: height * height */}
-        <motion.div
-          className="absolute left-[280px] top-[160px] w-20 h-16 rounded-lg border flex flex-col items-center justify-center"
-          style={{
-            borderColor: phase >= 3 ? 'var(--accent-amber)' : 'rgba(255,255,255,0.1)',
-            background: phase >= 3 ? 'rgba(245,158,11,0.1)' : 'rgba(17,22,51,0.8)',
-            boxShadow: phase >= 3 ? '0 0 15px var(--glow-amber)' : 'none',
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          <span className="text-amber font-code text-lg">x</span>
-          <span className="text-xs text-dim">multiply</span>
-        </motion.div>
-
-        {/* Height squared result */}
-        {phase >= 3 && (
-          <motion.div
-            className="absolute left-[275px] top-[230px] font-code text-sm text-amber"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{
-              opacity: phase >= 4 ? 0 : 1,
-              y: phase >= 4 ? 40 : 0,
-            }}
-            transition={{ duration: 0.8 }}
-          >
-            {height} x {height} = {heightSquared}
-          </motion.div>
-        )}
-
-        {/* Divide box: weight / height^2 */}
-        <motion.div
-          className="absolute left-[265px] top-[265px] w-20 h-16 rounded-lg border flex flex-col items-center justify-center"
-          style={{
-            borderColor: phase >= 4 ? 'var(--accent-gold)' : 'rgba(255,255,255,0.1)',
-            background: phase >= 4 ? 'rgba(255,215,0,0.1)' : 'rgba(17,22,51,0.8)',
-            boxShadow: phase >= 4 ? '0 0 15px var(--glow-gold)' : 'none',
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-        >
-          <span className="text-gold font-code text-lg">/</span>
-          <span className="text-xs text-dim">divide</span>
-        </motion.div>
-
-        {/* BMI result dropping out */}
-        {phase >= 5 && (
-          <motion.div
-            className="absolute left-[260px] top-[340px] flex flex-col items-center"
-            initial={{ opacity: 0, y: -20, scale: 0.5 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 200, damping: 12 }}
-          >
+            {/* Multiply box */}
             <motion.div
-              className="px-4 py-2 rounded-lg border-2 border-gold/60 font-code text-2xl text-gold font-bold"
+              className="absolute left-[220px] top-[110px] w-[80px] h-[45px] rounded-lg border flex flex-col items-center justify-center"
               style={{
-                background: 'rgba(255,215,0,0.1)',
-                boxShadow: '0 0 30px var(--glow-gold)',
+                borderColor: phase >= 3 ? 'var(--accent-amber)' : 'rgba(255,255,255,0.1)',
+                background: phase >= 3 ? 'rgba(245,158,11,0.1)' : 'rgba(17,22,51,0.8)',
+                boxShadow: phase >= 3 ? '0 0 15px var(--glow-amber)' : 'none',
               }}
-              animate={{
-                y: phase >= 6 ? 30 : 0,
-                x: phase >= 6 ? 80 : 0,
-                scale: phase >= 6 ? 0.7 : 1,
-              }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-            >
-              BMI: {bmi}
-            </motion.div>
-          </motion.div>
-        )}
-      </div>
-
-      {/* printf catching and announcing */}
-      {phase >= 6 && (
-        <motion.div
-          className="flex items-center gap-2 -mt-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          <span className="font-code text-sm text-gold">printf(&quot;BMI: %.1f\n&quot;, bmi);</span>
-          <motion.span
-            className="text-lg"
-            animate={{ rotate: [0, -10, 10, 0] }}
-            transition={{ duration: 0.5, repeat: 3 }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold)" strokeWidth="2">
-              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-            </svg>
-          </motion.span>
-        </motion.div>
-      )}
-
-      {/* Terminal output */}
-      {phase >= 7 && (
-        <motion.div
-          className="mt-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Terminal title="output" showCursor={true} width="w-80">
-            <motion.div
-              className="text-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
             >
-              <div className="text-green">Enter weight: <span className="text-primary">{weight}</span></div>
-              <div className="text-green">Enter height: <span className="text-primary">{height}</span></div>
+              <span className="text-amber font-code text-lg">×</span>
+              <span className="text-[10px] text-dim">multiply</span>
+            </motion.div>
+
+            {/* RESULT BOX — between multiply and divide */}
+            <motion.div
+              className="absolute left-[210px] top-[170px] w-[100px] h-[50px] rounded-lg border-2 border-dashed flex flex-col items-center justify-center"
+              style={{
+                borderColor: phase >= 3 ? 'var(--accent-amber)' : 'rgba(255,255,255,0.08)',
+                background: phase >= 3 ? 'rgba(245,158,11,0.08)' : 'rgba(17,22,51,0.5)',
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+            >
+              <AnimatePresence>
+                {phase >= 3 && phase < 6 && (
+                  <motion.div
+                    className="flex flex-col items-center"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 12 }}
+                  >
+                    <span className="font-code text-xs text-amber/60">{height}×{height}</span>
+                    <span className="font-code text-base text-amber font-bold" style={{ textShadow: '0 0 8px var(--glow-amber)' }}>
+                      {heightSquared}
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {phase < 3 && (
+                <span className="text-[10px] text-dim/40 font-code">result</span>
+              )}
+            </motion.div>
+
+            {/* Divide box */}
+            <motion.div
+              className="absolute left-[205px] top-[240px] w-[80px] h-[45px] rounded-lg border flex flex-col items-center justify-center"
+              style={{
+                borderColor: phase >= 5 ? 'var(--accent-gold)' : 'rgba(255,255,255,0.1)',
+                background: phase >= 5 ? 'rgba(255,215,0,0.1)' : 'rgba(17,22,51,0.8)',
+                boxShadow: phase >= 5 ? '0 0 15px var(--glow-gold)' : 'none',
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+            >
+              <span className="text-gold font-code text-lg">/</span>
+              <span className="text-[10px] text-dim">divide</span>
+            </motion.div>
+
+            {/* Division label */}
+            {phase >= 5 && phase < 7 && (
               <motion.div
-                className="text-gold mt-1"
+                className="absolute left-[295px] top-[248px] font-code text-xs text-gold/70"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3, duration: 0.4 }}
+              >
+                {weight} / {heightSquared}
+              </motion.div>
+            )}
+
+            {/* BMI result — drops below divide box, does NOT move to printf */}
+            {phase >= 6 && (
+              <motion.div
+                className="absolute left-[195px] top-[295px] flex flex-col items-center"
+                initial={{ opacity: 0, y: -15, scale: 0.5 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 12 }}
+              >
+                <motion.div
+                  className="px-4 py-2 rounded-lg border-2 border-gold/60 font-code text-xl text-gold font-bold"
+                  style={{
+                    background: 'rgba(255,215,0,0.1)',
+                    boxShadow: '0 0 25px var(--glow-gold)',
+                  }}
+                >
+                  BMI: {bmi}
+                </motion.div>
+              </motion.div>
+            )}
+          </div>
+
+          {/* printf + terminal — BELOW the machine, no overlap */}
+          <div className="flex flex-col items-center gap-3 mt-2">
+            {phase >= 7 && (
+              <motion.div
+                className="flex items-center gap-2"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.3 }}
               >
-                BMI: {bmi}
+                <span className="font-code text-sm text-gold">printf(&quot;BMI: %.1f\n&quot;, bmi);</span>
+                <motion.span
+                  animate={{ rotate: [0, -10, 10, 0] }}
+                  transition={{ duration: 0.5, repeat: 3 }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold)" strokeWidth="2">
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+                  </svg>
+                </motion.span>
               </motion.div>
+            )}
+
+            {phase >= 7 && (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6, duration: 0.5 }}
+              >
+                <Terminal title="output" showCursor={true} width="w-72">
+                  <motion.div
+                    className="text-sm"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <div className="text-green">Enter weight: <span className="text-primary">{weight}</span></div>
+                    <div className="text-green">Enter height: <span className="text-primary">{height}</span></div>
+                    <motion.div
+                      className="text-gold mt-1"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                    >
+                      BMI: {bmi}
+                    </motion.div>
+                  </motion.div>
+                </Terminal>
+              </motion.div>
+            )}
+          </div>
+        </div>
+
+        {/* Right side — Code panel */}
+        <motion.div
+          className="w-72 flex-shrink-0"
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <div
+            className="rounded-lg overflow-hidden"
+            style={{
+              background: 'rgba(17, 22, 51, 0.9)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
+            }}
+          >
+            {/* Title bar */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-black/30">
+              <div className="w-2.5 h-2.5 rounded-full bg-red/80" />
+              <div className="w-2.5 h-2.5 rounded-full bg-amber/80" />
+              <div className="w-2.5 h-2.5 rounded-full bg-green/80" />
+              <span className="text-xs text-dim ml-2 font-code">bmi.c</span>
+            </div>
+
+            {/* Code lines */}
+            <div className="px-3 py-3 font-code text-xs leading-relaxed">
+              {BMI_CODE.map((line, i) => {
+                const isHighlighted = highlightLine === i;
+                const isPast = highlightLine > i && highlightLine !== -1;
+
+                return (
+                  <motion.div
+                    key={i}
+                    className="flex items-center gap-2 px-1.5 py-px rounded transition-colors duration-300"
+                    style={{
+                      background: isHighlighted ? 'rgba(245,158,11,0.12)' : 'transparent',
+                      borderLeft: isHighlighted ? '2px solid var(--accent-amber)' : '2px solid transparent',
+                    }}
+                    animate={{ opacity: isPast ? 0.45 : 1 }}
+                  >
+                    <span className="text-dim/30 text-[10px] w-3 text-right select-none flex-shrink-0">
+                      {i + 1}
+                    </span>
+                    <span className="flex-1 whitespace-pre">
+                      {line.colored ? (
+                        line.colored.map((seg, j) => (
+                          <span key={j} style={{ color: seg.color }}>{seg.text}</span>
+                        ))
+                      ) : (
+                        <span className="text-dim">{line.text}</span>
+                      )}
+                    </span>
+                    {isHighlighted && (
+                      <motion.span
+                        className="text-[10px] font-bold flex-shrink-0 text-amber"
+                        initial={{ opacity: 0, x: -3 }}
+                        animate={{ opacity: 1, x: 0 }}
+                      >
+                        ◀
+                      </motion.span>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Execution status */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`status-${phase}`}
+              className="mt-2 text-center text-xs font-body text-dim"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.7 }}
+              exit={{ opacity: 0 }}
+            >
+              {phase === 0 && 'Program loaded...'}
+              {phase === 1 && 'Reading height from user...'}
+              {phase === 2 && 'height = 1.75'}
+              {phase === 3 && `Computing height × height = ${heightSquared}`}
+              {phase === 4 && 'Reading weight from user...'}
+              {phase === 5 && `Computing ${weight} / ${heightSquared}...`}
+              {phase === 6 && `BMI = ${bmi}`}
+              {phase === 7 && 'Printing result to console.'}
             </motion.div>
-          </Terminal>
+          </AnimatePresence>
         </motion.div>
-      )}
+      </div>
 
       {phase >= 7 && (
         <Narration
           text="scanf pours data in, the machine crunches it, printf announces the result. That's the complete I/O pipeline."
-          delay={0.5}
+          delay={0.8}
         />
       )}
     </div>

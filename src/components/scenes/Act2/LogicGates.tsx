@@ -93,7 +93,7 @@ if (!isLoggedIn) {
       </div>
 
       {/* Gate visualization */}
-      <div className="relative w-full max-w-2xl h-64 flex items-center justify-center">
+      <div className="relative w-full max-w-2xl h-72 flex items-center justify-center">
         <AnimatePresence mode="wait">
           {activeGate === 'AND' && (
             <AndGateViz
@@ -331,17 +331,70 @@ function AndGateViz({ inputA, inputB, result, toggleA, toggleB, animKey }: {
   );
 }
 
+/* ── Small door for OR gate (compact to avoid overlap) ── */
+function SmallDoor({ label, isOpen, onToggle, color }: {
+  label: string; isOpen: boolean; onToggle: () => void; color: { open: string; shut: string };
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div
+        className="relative w-14 h-20 rounded-md border-2 flex items-center justify-center overflow-hidden"
+        style={{
+          borderColor: isOpen ? color.open : color.shut,
+          background: isOpen ? `${color.open}18` : `${color.shut}12`,
+        }}
+      >
+        <motion.div
+          className="absolute inset-0 rounded-sm"
+          style={{
+            background: isOpen ? 'transparent' : `${color.shut}20`,
+            transformOrigin: 'left center',
+          }}
+          animate={{ rotateY: isOpen ? -90 : 0, opacity: isOpen ? 0 : 1 }}
+          transition={{ type: 'spring', stiffness: 150, damping: 18 }}
+        />
+        <div className="relative z-10 flex flex-col items-center gap-0.5">
+          <span className="font-code text-[10px]" style={{ color: isOpen ? color.open : color.shut }}>
+            {label}
+          </span>
+          <motion.span
+            key={isOpen ? 'open' : 'shut'}
+            className="font-code text-xs font-bold"
+            style={{ color: isOpen ? color.open : color.shut }}
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+          >
+            {isOpen ? 'OPEN' : 'SHUT'}
+          </motion.span>
+          <span className="font-code text-[10px] opacity-50">({isOpen ? '1' : '0'})</span>
+        </div>
+      </div>
+      <motion.button
+        className="px-2 py-0.5 rounded text-[10px] font-code border"
+        style={{
+          borderColor: isOpen ? color.open : color.shut,
+          color: isOpen ? color.open : color.shut,
+          background: isOpen ? `${color.open}15` : `${color.shut}15`,
+        }}
+        onClick={(e) => { e.stopPropagation(); onToggle(); }}
+        whileTap={{ scale: 0.9 }}
+      >
+        Toggle
+      </motion.button>
+    </div>
+  );
+}
+
 /* ── OR Gate: Two parallel paths, Bit takes whichever is open ── */
 function OrGateViz({ inputA, inputB, result, toggleA, toggleB, animKey }: {
   inputA: boolean; inputB: boolean; result: boolean;
   toggleA: () => void; toggleB: () => void; animKey: number;
 }) {
-  // Bit chooses: if A open → go top path, else if B open → go bottom path, else stuck
   const chosenPath = inputA ? 'A' : inputB ? 'B' : null;
 
-  // Bit Y: path A is top (-55px), path B is bottom (+55px), start is middle (0)
-  const bitTargetY = chosenPath === 'A' ? -55 : chosenPath === 'B' ? 55 : 0;
-  const bitTargetX = chosenPath ? 260 : 0;
+  // Bit travels: top path y=70, bottom path y=210, start y=140 (center)
+  const bitTargetY = chosenPath === 'A' ? -70 : chosenPath === 'B' ? 70 : 0;
+  const bitTargetX = chosenPath ? 280 : 0;
 
   return (
     <motion.div
@@ -349,13 +402,13 @@ function OrGateViz({ inputA, inputB, result, toggleA, toggleB, animKey }: {
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      style={{ height: 240 }}
+      style={{ height: 280 }}
     >
       {/* Two parallel path lines */}
       <svg className="absolute inset-0 pointer-events-none" style={{ left: '8%', width: '84%', height: '100%' }}>
         {/* Path A (top) */}
         <path
-          d="M 30 120 C 80 120, 80 60, 130 60 L 250 60 C 280 60, 280 120, 310 120"
+          d="M 30 140 C 80 140, 80 70, 140 70 L 240 70 C 270 70, 280 140, 320 140"
           fill="none"
           stroke={inputA ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.05)'}
           strokeWidth="2"
@@ -363,7 +416,7 @@ function OrGateViz({ inputA, inputB, result, toggleA, toggleB, animKey }: {
         />
         {/* Path B (bottom) */}
         <path
-          d="M 30 120 C 80 120, 80 180, 130 180 L 250 180 C 280 180, 280 120, 310 120"
+          d="M 30 140 C 80 140, 80 210, 140 210 L 240 210 C 270 210, 280 140, 320 140"
           fill="none"
           stroke={inputB ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.05)'}
           strokeWidth="2"
@@ -375,20 +428,20 @@ function OrGateViz({ inputA, inputB, result, toggleA, toggleB, animKey }: {
       <motion.div
         key={animKey}
         className="absolute z-20"
-        style={{ top: '50%', left: '8%' }}
-        initial={{ x: 0, y: -20 }}
-        animate={{ x: bitTargetX, y: bitTargetY - 20 }}
+        style={{ top: '50%', left: '8%', marginTop: -20 }}
+        initial={{ x: 0, y: 0 }}
+        animate={{ x: bitTargetX, y: bitTargetY }}
         transition={{ type: 'spring', stiffness: 40, damping: 12, delay: 0.2 }}
       >
         <BitCharacter
           mood={result ? 'happy' : 'sad'}
-          size={40}
+          size={36}
           color="#00BFFF"
           label="Bit"
         />
         {!result && (
           <motion.div
-            className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-xs font-code whitespace-nowrap"
+            className="absolute -top-5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[10px] font-code whitespace-nowrap"
             style={{ background: 'rgba(239,68,68,0.2)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -399,23 +452,23 @@ function OrGateViz({ inputA, inputB, result, toggleA, toggleB, animKey }: {
         )}
       </motion.div>
 
-      {/* Door A (top path) */}
-      <div className="absolute z-10" style={{ left: 'calc(8% + 120px)', top: '12%' }}>
-        <Door label="Path A" isOpen={inputA} onToggle={toggleA} color={{ open: '#22C55E', shut: '#EF4444' }} />
+      {/* Door A (top path) — positioned at y=70 center */}
+      <div className="absolute z-10" style={{ left: 'calc(8% + 130px)', top: '25%', transform: 'translateY(-50%)' }}>
+        <SmallDoor label="Path A" isOpen={inputA} onToggle={toggleA} color={{ open: '#22C55E', shut: '#EF4444' }} />
       </div>
 
       {/* || symbol */}
-      <div className="absolute z-10 font-display text-2xl text-purple-400" style={{ left: 'calc(8% + 95px)', top: '50%', transform: 'translateY(-50%)' }}>
+      <div className="absolute z-10 font-display text-xl text-purple-400" style={{ left: 'calc(8% + 108px)', top: '50%', transform: 'translateY(-50%)' }}>
         ||
       </div>
 
-      {/* Door B (bottom path) */}
-      <div className="absolute z-10" style={{ left: 'calc(8% + 120px)', bottom: '2%' }}>
-        <Door label="Path B" isOpen={inputB} onToggle={toggleB} color={{ open: '#22C55E', shut: '#EF4444' }} />
+      {/* Door B (bottom path) — positioned at y=210 center */}
+      <div className="absolute z-10" style={{ left: 'calc(8% + 130px)', top: '75%', transform: 'translateY(-50%)' }}>
+        <SmallDoor label="Path B" isOpen={inputB} onToggle={toggleB} color={{ open: '#22C55E', shut: '#EF4444' }} />
       </div>
 
       {/* Finish */}
-      <div className="absolute z-10" style={{ left: 'calc(8% + 290px)', top: '50%', transform: 'translateY(-50%)' }}>
+      <div className="absolute z-10" style={{ left: 'calc(8% + 310px)', top: '50%', transform: 'translateY(-50%)' }}>
         <motion.div
           className="flex flex-col items-center gap-1"
           animate={{ opacity: result ? 1 : 0.2 }}

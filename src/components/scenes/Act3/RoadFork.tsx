@@ -1,13 +1,52 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BitCharacter from '@/components/shared/BitCharacter';
 import Terminal from '@/components/shared/Terminal';
 import InteractiveIndicator from '@/components/shared/InteractiveIndicator';
 import Narration from '@/components/shared/Narration';
+
+// Bit movement phases:
+// 'start'    → walking toward the junction
+// 'junction' → arrived at fork, checking condition
+// 'done'     → moved to the correct path end
+
+type BitPhase = 'start' | 'junction' | 'done';
+
 export default function RoadFork() {
   const [age, setAge] = useState(18);
   const eligible = age >= 18;
+  const [bitPhase, setBitPhase] = useState<BitPhase>('done');
+  const prevAge = useRef(age);
+
+  // When age changes, restart the bit walk: start → junction → done
+  useEffect(() => {
+    if (prevAge.current === age) return;
+    prevAge.current = age;
+
+    setBitPhase('start');
+    const t1 = setTimeout(() => setBitPhase('junction'), 600);
+    const t2 = setTimeout(() => setBitPhase('done'), 1500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [age]);
+
+  // Bit position based on phase
+  const getBitPos = () => {
+    if (bitPhase === 'start') return { left: '35%', top: '65%' };
+    if (bitPhase === 'junction') return { left: '48%', top: '45%' };
+    // done — go past the labels so no overlap
+    if (eligible) return { left: '88%', top: '8%' };
+    return { left: '88%', top: '78%' };
+  };
+
+  const bitPos = getBitPos();
+
+  // Bit mood
+  const getBitMood = () => {
+    if (bitPhase === 'junction') return 'neutral';
+    if (bitPhase === 'done') return eligible ? 'happy' : 'sad';
+    return 'neutral';
+  };
 
   const code = `int age = ${age};
 
@@ -40,7 +79,7 @@ if (age >= 18) {
             transition={{ duration: 0.5 }}
           />
           {/* Left fork glow */}
-          {eligible && (
+          {eligible && bitPhase === 'done' && (
             <motion.path
               d="M 300 180 Q 370 130 500 80"
               stroke="#22C55E"
@@ -64,6 +103,20 @@ if (age >= 18) {
             animate={{ stroke: !eligible ? '#F59E0B' : '#2a2a3a' }}
             transition={{ duration: 0.5 }}
           />
+          {/* Right fork glow */}
+          {!eligible && bitPhase === 'done' && (
+            <motion.path
+              d="M 300 180 Q 370 220 500 260"
+              stroke="#F59E0B"
+              strokeWidth="28"
+              fill="none"
+              strokeLinecap="round"
+              strokeOpacity={0.15}
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.8 }}
+            />
+          )}
 
           {/* Barrier on left if not eligible */}
           <AnimatePresence>
@@ -89,38 +142,57 @@ if (age >= 18) {
             age {'>'}= 18 ?
           </text>
 
-          {/* Left label */}
+          {/* Left label — positioned along the path, not at the end */}
           <motion.g animate={{ opacity: eligible ? 1 : 0.3 }} transition={{ duration: 0.3 }}>
-            <rect x="440" y="50" width="120" height="28" rx="6" fill="rgba(34,197,94,0.2)" stroke="#22C55E" strokeWidth="1" />
-            <text x="500" y="68" textAnchor="middle" fill="#22C55E" fontSize="11" fontFamily="monospace">
+            <rect x="370" y="38" width="120" height="28" rx="6" fill="rgba(34,197,94,0.2)" stroke="#22C55E" strokeWidth="1" />
+            <text x="430" y="56" textAnchor="middle" fill="#22C55E" fontSize="11" fontFamily="monospace">
               Eligible to vote!
             </text>
           </motion.g>
 
-          {/* Right label */}
+          {/* Right label — positioned along the path, not at the end */}
           <motion.g animate={{ opacity: !eligible ? 1 : 0.3 }} transition={{ duration: 0.3 }}>
-            <rect x="440" y="240" width="120" height="28" rx="6" fill="rgba(245,158,11,0.2)" stroke="#F59E0B" strokeWidth="1" />
-            <text x="500" y="258" textAnchor="middle" fill="#F59E0B" fontSize="11" fontFamily="monospace">
+            <rect x="370" y="250" width="120" height="28" rx="6" fill="rgba(245,158,11,0.2)" stroke="#F59E0B" strokeWidth="1" />
+            <text x="430" y="268" textAnchor="middle" fill="#F59E0B" fontSize="11" fontFamily="monospace">
               Not eligible
             </text>
           </motion.g>
         </svg>
 
-        {/* BitCharacter walking */}
+        {/* BitCharacter walking with multi-step animation */}
         <motion.div
           className="absolute"
           animate={{
-            left: eligible ? '75%' : '75%',
-            top: eligible ? '15%' : '70%',
+            left: bitPos.left,
+            top: bitPos.top,
           }}
           transition={{ type: 'spring', stiffness: 60, damping: 15 }}
         >
           <BitCharacter
-            mood={eligible ? 'happy' : 'sad'}
+            mood={getBitMood()}
             size={45}
-            color={eligible ? '#22C55E' : '#F59E0B'}
+            color={bitPhase === 'done' ? (eligible ? '#22C55E' : '#F59E0B') : '#00BFFF'}
             label={`age=${age}`}
           />
+
+          {/* "Checking..." bubble at junction */}
+          <AnimatePresence>
+            {bitPhase === 'junction' && (
+              <motion.div
+                className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded text-[10px] font-code whitespace-nowrap"
+                style={{
+                  background: 'rgba(255,215,0,0.2)',
+                  color: '#FFD700',
+                  border: '1px solid rgba(255,215,0,0.3)',
+                }}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+              >
+                {age} {'>'}= 18 ? {eligible ? 'YES!' : 'NO...'}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
 

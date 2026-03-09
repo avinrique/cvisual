@@ -45,9 +45,13 @@ export default function FirstPrintf() {
   const codeCompleteRef = useRef(codeComplete);
   codeCompleteRef.current = codeComplete;
 
-  // Arrow key handler — only works after code finishes typing
+  // Arrow key handler — if code is still typing, skip to end; otherwise advance phase
   const stableStepHandler = useCallback(() => {
-    if (!codeCompleteRef.current) return true; // consume the key but do nothing while typing
+    if (!codeCompleteRef.current) {
+      setCodeComplete(true); // skip typing animation
+      setPhase(1);           // jump to first explanation phase
+      return true;
+    }
     if (phaseRef.current >= 4) return false;   // let scene advance
     setPhase(prev => prev + 1);
     return true;
@@ -103,6 +107,7 @@ export default function FirstPrintf() {
             onComplete={handleCodeComplete}
             highlightLines={activeHighlight}
             className="text-base"
+            skipAnimation={codeComplete}
           />
 
           {/* stdio.h tooltip */}
@@ -231,9 +236,23 @@ export default function FirstPrintf() {
           exit={{ opacity: 0, y: 10 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <p className="text-dim text-center text-2xl md:text-3xl font-body italic max-w-2xl leading-relaxed">
+          <motion.p
+            className="text-center text-2xl md:text-3xl font-body italic max-w-2xl leading-relaxed"
+            style={{
+              color: 'var(--accent-gold)',
+              textShadow: '0 0 20px rgba(255,215,0,0.6), 0 0 40px rgba(255,215,0,0.3)',
+            }}
+            animate={{
+              textShadow: [
+                '0 0 20px rgba(255,215,0,0.6), 0 0 40px rgba(255,215,0,0.3)',
+                '0 0 30px rgba(255,215,0,0.8), 0 0 60px rgba(255,215,0,0.5)',
+                '0 0 20px rgba(255,215,0,0.6), 0 0 40px rgba(255,215,0,0.3)',
+              ],
+            }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          >
             &ldquo;{NARRATIONS[phase]}&rdquo;
-          </p>
+          </motion.p>
         </motion.div>
       </AnimatePresence>
     </div>

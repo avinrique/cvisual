@@ -13,6 +13,7 @@ interface CodeTyperProps {
   highlightLines?: number[];
   className?: string;
   showLineNumbers?: boolean;
+  skipAnimation?: boolean;
 }
 
 export default function CodeTyper({
@@ -25,11 +26,21 @@ export default function CodeTyper({
   highlightLines = [],
   className = '',
   showLineNumbers = true,
+  skipAnimation = false,
 }: CodeTyperProps) {
   const [displayedLength, setDisplayedLength] = useState(0);
   const [started, setStarted] = useState(false);
   const [complete, setComplete] = useState(false);
   const prevLineRef = useRef(0);
+
+  // Allow parent to skip the typing animation
+  useEffect(() => {
+    if (skipAnimation && !complete) {
+      setDisplayedLength(code.length);
+      setComplete(true);
+      onComplete?.();
+    }
+  }, [skipAnimation, complete, code.length, onComplete]);
 
   useEffect(() => {
     const t = setTimeout(() => setStarted(true), delay);

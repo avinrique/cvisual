@@ -24,9 +24,9 @@ const NARRATIONS: Record<number, string> = {
 };
 
 const WRONG_ASSIGNMENTS = [
-  { code: 'int x = 3.14;', reason: 'truncates to 3!' },
-  { code: 'char c = "hello";', reason: "that's a string, not a char!" },
-  { code: "float f = 'A';", reason: 'weird implicit conversion!' },
+  { code: 'int x = 3.14;', reason: 'truncates to 3!', output: 'x = 3' },
+  { code: 'char c = "hello";', reason: "that's a string, not a char!", output: 'warning: incompatible pointer' },
+  { code: "float f = 'A';", reason: 'weird implicit conversion!', output: 'f = 65.000000' },
 ];
 
 const MAX_PHASE = 9;
@@ -265,33 +265,7 @@ export default function DataTypes() {
             {WRONG_ASSIGNMENTS.slice(0, wrongCount).map((wa, i) => {
               const isNew = i === wrongCount - 1;
               return (
-                <motion.div
-                  key={wa.code}
-                  className="flex items-center gap-4"
-                  initial={isNew ? { opacity: 0, x: -30 } : false}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <span className="font-code text-lg md:text-xl text-primary/80 line-through decoration-red/60">
-                    {wa.code}
-                  </span>
-                  <motion.span
-                    className="text-red text-2xl font-bold"
-                    initial={isNew ? { opacity: 0, scale: 0 } : false}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={isNew ? { delay: 0.15, type: 'spring', stiffness: 300 } : {}}
-                  >
-                    ✗
-                  </motion.span>
-                  <motion.span
-                    className="text-sm text-dim font-body italic"
-                    initial={isNew ? { opacity: 0 } : false}
-                    animate={{ opacity: 1 }}
-                    transition={isNew ? { delay: 0.3 } : {}}
-                  >
-                    {wa.reason}
-                  </motion.span>
-                </motion.div>
+                <WrongAssignmentLine key={wa.code} wa={wa} isNew={isNew} alreadySlashed={!isNew} />
               );
             })}
           </motion.div>
@@ -366,6 +340,75 @@ function CodeDeclaration({ index }: { index: number }) {
       </span>
       <span className="text-dim">;</span>
     </>
+  );
+}
+
+function WrongAssignmentLine({ wa, isNew, alreadySlashed }: { wa: { code: string; reason: string; output: string }; isNew: boolean; alreadySlashed: boolean }) {
+  const [slashed, setSlashed] = useState(alreadySlashed);
+
+  useEffect(() => {
+    if (isNew && !alreadySlashed) {
+      const timer = setTimeout(() => setSlashed(true), 900);
+      return () => clearTimeout(timer);
+    }
+  }, [isNew, alreadySlashed]);
+
+  return (
+    <motion.div
+      className="flex flex-col gap-2"
+      initial={isNew ? { opacity: 0, x: -30 } : false}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <div className="flex items-center gap-4">
+        <span
+          className="font-code text-lg md:text-xl text-primary/80 transition-all duration-500"
+          style={{
+            textDecoration: slashed ? 'line-through' : 'none',
+            textDecorationColor: slashed ? 'rgba(239,68,68,0.6)' : 'transparent',
+          }}
+        >
+          {wa.code}
+        </span>
+        <AnimatePresence>
+          {slashed && (
+            <>
+              <motion.span
+                className="text-red text-2xl font-bold"
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+              >
+                ✗
+              </motion.span>
+              <motion.span
+                className="text-sm text-dim font-body italic"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.15 }}
+              >
+                {wa.reason}
+              </motion.span>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+      <AnimatePresence>
+        {slashed && (
+          <motion.div
+            className="flex items-center gap-2 ml-4"
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.3 }}
+          >
+            <span className="text-xs font-code text-dim">→</span>
+            <span className="font-code text-sm px-3 py-1 rounded border border-red/20 bg-red/5 text-red/80">
+              {wa.output}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
