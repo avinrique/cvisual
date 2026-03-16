@@ -115,6 +115,12 @@ export default function ForLoopTrack() {
                   <text x={pos.x} y={pos.y + 5} textAnchor="middle" fill={s.color} fontSize="12" fontFamily="monospace" fontWeight="bold">
                     {s.label}
                   </text>
+                  {/* i++ tooltip when UPDATE station is active */}
+                  {i === 2 && isActive && (
+                    <text x={pos.x} y={pos.y + 48} textAnchor="middle" fill="#F59E0B" fontSize="9" fontFamily="monospace" opacity="0.8">
+                      i++ means i = i + 1
+                    </text>
+                  )}
                 </g>
               );
             })}

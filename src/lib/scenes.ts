@@ -75,6 +75,22 @@ export const scenes: SceneConfig[] = [
     component: lazy(() => import('@/components/scenes/Act1/BMICalculator')),
     accentColor: 'var(--accent-amber)',
   },
+  {
+    id: 'shortcut-operators',
+    act: 1,
+    title: 'The Shortcut',
+    component: lazy(() => import('@/components/scenes/Act1/ShortcutOperators')),
+    accentColor: 'var(--accent-green)',
+    interactive: true,
+  },
+  {
+    id: 'modulo-machine',
+    act: 1,
+    title: 'The Remainder',
+    component: lazy(() => import('@/components/scenes/Act1/ModuloMachine')),
+    accentColor: 'var(--accent-amber)',
+    interactive: true,
+  },
   // Act 2
   {
     id: 'light-switch',
@@ -117,6 +133,14 @@ export const scenes: SceneConfig[] = [
     interactive: true,
   },
   {
+    id: 'nested-maze',
+    act: 3,
+    title: 'The Nested Maze',
+    component: lazy(() => import('@/components/scenes/Act3/NestedMaze')),
+    accentColor: 'var(--accent-blue)',
+    interactive: true,
+  },
+  {
     id: 'else-if-staircase',
     act: 3,
     title: 'The Staircase',
@@ -130,6 +154,14 @@ export const scenes: SceneConfig[] = [
     title: 'The Elevator',
     component: lazy(() => import('@/components/scenes/Act3/SwitchElevator')),
     accentColor: 'var(--accent-purple)',
+    interactive: true,
+  },
+  {
+    id: 'ternary-express',
+    act: 3,
+    title: 'The Express Lane',
+    component: lazy(() => import('@/components/scenes/Act3/TernaryExpress')),
+    accentColor: 'var(--accent-cyan)',
     interactive: true,
   },
   // Act 4
@@ -164,6 +196,13 @@ export const scenes: SceneConfig[] = [
     interactive: true,
   },
   {
+    id: 'infinite-trap',
+    act: 4,
+    title: 'The Infinite Trap',
+    component: lazy(() => import('@/components/scenes/Act4/InfiniteTrap')),
+    accentColor: 'var(--accent-red)',
+  },
+  {
     id: 'do-while-restaurant',
     act: 4,
     title: 'The Restaurant',
@@ -176,6 +215,14 @@ export const scenes: SceneConfig[] = [
     title: 'The Clock',
     component: lazy(() => import('@/components/scenes/Act4/NestedLoopClock')),
     accentColor: 'var(--accent-amber)',
+    interactive: true,
+  },
+  {
+    id: 'off-by-one',
+    act: 4,
+    title: 'The Fence Post Problem',
+    component: lazy(() => import('@/components/scenes/Act4/OffByOne')),
+    accentColor: 'var(--accent-red)',
     interactive: true,
   },
   // Act 5

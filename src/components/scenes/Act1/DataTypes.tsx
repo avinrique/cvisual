@@ -20,16 +20,18 @@ const NARRATIONS: Record<number, string> = {
   6: 'Put the wrong data in the wrong box, and C will get confused \u2014 or silently break.',
   7: 'Put the wrong data in the wrong box, and C will get confused \u2014 or silently break.',
   8: 'Put the wrong data in the wrong box, and C will get confused \u2014 or silently break.',
-  9: 'But how does printf know what type of data you\u2019re giving it? That\u2019s next.',
+  9: 'Integer division silently drops the decimal \u2014 5 / 2 becomes 2, not 2.5.',
+  10: 'But how does printf know what type of data you\u2019re giving it? That\u2019s next.',
 };
 
 const WRONG_ASSIGNMENTS = [
   { code: 'int x = 3.14;', reason: 'truncates to 3!', output: 'x = 3' },
   { code: 'char c = "hello";', reason: "that's a string, not a char!", output: 'warning: incompatible pointer' },
   { code: "float f = 'A';", reason: 'weird implicit conversion!', output: 'f = 65.000000' },
+  { code: 'int x = 5 / 2;', reason: 'truncates! not 2.5', output: 'x = 2' },
 ];
 
-const MAX_PHASE = 9;
+const MAX_PHASE = 10;
 
 export default function DataTypes() {
   const [phase, setPhase] = useState(0);
@@ -61,8 +63,8 @@ export default function DataTypes() {
   }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
   const activeTypeIndex = phase >= 1 && phase <= 4 ? phase - 1 : -1;
-  // How many wrong assignments to show (phases 6=1, 7=2, 8=3)
-  const wrongCount = phase >= 6 && phase <= 8 ? phase - 5 : 0;
+  // How many wrong assignments to show (phases 6=1, 7=2, 8=3, 9=4)
+  const wrongCount = phase >= 6 && phase <= 9 ? phase - 5 : 0;
 
   return (
     <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void">
@@ -263,9 +265,9 @@ export default function DataTypes() {
         )}
       </AnimatePresence>
 
-      {/* Phases 6-8: Wrong type demo, one per press */}
+      {/* Phases 6-9: Wrong type demo, one per press */}
       <AnimatePresence>
-        {phase >= 6 && phase <= 8 && (
+        {phase >= 6 && phase <= 9 && (
           <motion.div
             className="flex flex-col items-center gap-6 z-10"
             initial={{ opacity: 0 }}
@@ -283,9 +285,9 @@ export default function DataTypes() {
         )}
       </AnimatePresence>
 
-      {/* Phase 9: Bridge to format specifiers */}
+      {/* Phase 10: Bridge to format specifiers */}
       <AnimatePresence>
-        {phase === 9 && (
+        {phase === 10 && (
           <motion.div
             className="flex flex-col items-center gap-8 z-10"
             initial={{ opacity: 0, scale: 0.9 }}

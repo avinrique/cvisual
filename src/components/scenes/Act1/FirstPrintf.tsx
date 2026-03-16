@@ -25,6 +25,7 @@ const NARRATIONS: Record<number, string> = {
   2: 'Every C program starts here — inside main.',
   3: 'printf sends text from our code to the screen.',
   4: "printf is C's megaphone — it shouts to the console whatever you put inside those quotes.",
+  5: '\\n isn\'t the only escape. C has a whole toolkit of special characters.',
 };
 
 export default function FirstPrintf() {
@@ -53,7 +54,7 @@ export default function FirstPrintf() {
       setPhase(1);           // jump to first explanation phase
       return true;
     }
-    if (phaseRef.current >= 4) return false;   // let scene advance
+    if (phaseRef.current >= 5) return false;   // let scene advance
     setPhase(prev => prev + 1);
     return true;
   }, []);
@@ -236,6 +237,39 @@ export default function FirstPrintf() {
           </Terminal>
         </div>
       </div>
+
+      {/* Phase 5: Escape sequences quick list */}
+      <AnimatePresence>
+        {phase === 5 && (
+          <motion.div
+            className="absolute bottom-28 left-0 right-0 flex justify-center px-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex gap-6">
+              {[
+                { seq: '\\n', desc: 'new line' },
+                { seq: '\\t', desc: 'tab space' },
+                { seq: '\\\\', desc: 'backslash' },
+                { seq: '\\"', desc: 'double quote' },
+              ].map((item, i) => (
+                <motion.div
+                  key={item.seq}
+                  className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg border border-amber/20 bg-amber/5"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 + i * 0.15 }}
+                >
+                  <span className="font-code text-lg text-amber font-bold">{item.seq}</span>
+                  <span className="text-xs text-dim font-body">{item.desc}</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Narration text — bigger for projector */}
       <AnimatePresence mode="wait">
