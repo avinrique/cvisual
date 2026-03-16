@@ -19,6 +19,7 @@ interface AppState {
   animationSpeed: number;
   isPaused: boolean;
   sceneStepHandler: (() => boolean) | null;
+  sceneStepBackHandler: (() => boolean) | null;
 
   nextScene: () => void;
   prevScene: () => void;
@@ -29,6 +30,7 @@ interface AppState {
   setAnimationSpeed: (speed: number) => void;
   togglePause: () => void;
   setSceneStepHandler: (handler: (() => boolean) | null) => void;
+  setSceneStepBackHandler: (handler: (() => boolean) | null) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -40,6 +42,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   animationSpeed: 1,
   isPaused: false,
   sceneStepHandler: null,
+  sceneStepBackHandler: null,
 
   nextScene: () => {
     if (!canNavigate()) return;
@@ -53,6 +56,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   prevScene: () => {
     if (!canNavigate()) return;
+    const { sceneStepBackHandler } = get();
+    if (sceneStepBackHandler && sceneStepBackHandler()) return;
     const { currentSceneIndex } = get();
     if (currentSceneIndex > 0) {
       set({ currentSceneIndex: currentSceneIndex - 1, isPaused: false });
@@ -72,4 +77,5 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAnimationSpeed: (speed) => set({ animationSpeed: speed }),
   togglePause: () => set(s => ({ isPaused: !s.isPaused })),
   setSceneStepHandler: (handler) => set({ sceneStepHandler: handler }),
+  setSceneStepBackHandler: (handler) => set({ sceneStepBackHandler: handler }),
 }));

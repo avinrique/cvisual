@@ -1,172 +1,223 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BitCharacter from '@/components/shared/BitCharacter';
 import Narration from '@/components/shared/Narration';
-import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
+import { useAppStore } from '@/lib/store';
+
+const codeLines = [
+  { text: 'int main() {', color: '#8B5CF6' },
+  { text: '  printf("Running...\\n");', color: '#FFD700' },
+  { text: '  return 0;', color: '#22C55E' },
+  { text: '  printf("Never!\\n");', color: '#FF6B6B' },
+  { text: '}', color: '#8B5CF6' },
+];
+
+// Phase 0: scene appears, Bit stands at line 0
+// Phase 1: Bit moves to line 1 (printf Running), it executes
+// Phase 2: Bit moves to line 2 (return 0;), it glows
+// Phase 3: Bit gets EJECTED upward out of the code block, return 0 fires
+// Phase 4: line 3 (printf Never) gets crossed out + "unreachable" label
 
 export default function ReturnEject() {
   const [phase, setPhase] = useState(0);
-  const { scaledTimeout } = useAnimationSpeed();
+  const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
+  const stableStepHandler = useCallback(() => {
+    if (phaseRef.current >= 4) return false;
+    setPhase(prev => prev + 1);
+    return true;
+  }, []);
+
+  const stableStepBackHandler = useCallback(() => {
+    if (phaseRef.current <= 0) return false;
+    setPhase(prev => prev - 1);
+    return true;
+  }, []);
 
   useEffect(() => {
-    const cleanups = [
-      scaledTimeout(() => setPhase(1), 1500),
-      scaledTimeout(() => setPhase(2), 3500),
-      scaledTimeout(() => setPhase(3), 5000),
-      scaledTimeout(() => setPhase(4), 6500),
-      scaledTimeout(() => setPhase(5), 8000),
-    ];
-    return () => cleanups.forEach(fn => fn());
-  }, [scaledTimeout]);
+    setSceneStepHandler(stableStepHandler);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
+
+  // Which line Bit is on (0-indexed into codeLines)
+  const bitLine = phase <= 2 ? phase : -1;
+  const ejected = phase >= 3;
+
+  // Output terminal
+  const output: string[] = [];
+  if (phase >= 1) output.push('Running...');
+  if (phase >= 3) output.push('Program exited with code 0');
 
   return (
     <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void">
-      {/* The main() room */}
-      <motion.div
-        className="relative w-[90%] max-w-2xl h-[70%] max-h-[500px] rounded-lg border-2"
-        style={{ borderColor: 'rgba(255,255,255,0.15)', background: 'rgba(17,22,51,0.6)' }}
-        animate={phase >= 4 ? { opacity: 0.2, scale: 0.95 } : { opacity: 1 }}
-        transition={{ duration: 1.5 }}
-      >
-        {/* Room label */}
-        <motion.div
-          className="absolute -top-4 left-4 px-3 py-1 rounded bg-void border border-white/10 font-code text-xs"
-          style={{ color: '#8B5CF6' }}
-        >
-          int main() {'{ }'}
-        </motion.div>
-
-        {/* Interior elements */}
-        <div className="absolute inset-4 flex flex-col justify-between">
-          {/* Loop track (top area) */}
-          <motion.div
-            className="flex items-center gap-2"
-            animate={phase >= 4 ? { opacity: 0.2 } : {}}
-          >
-            <svg width="180" height="60" viewBox="0 0 180 60">
-              <ellipse cx="90" cy="30" rx="80" ry="25" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" strokeDasharray="6 4" />
-              <text x="90" y="34" textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="10" fontFamily="monospace">for loop</text>
-            </svg>
-          </motion.div>
-
-          {/* Elevator/staircase in middle */}
-          <motion.div
-            className="flex items-center gap-6 justify-center"
-            animate={phase >= 4 ? { opacity: 0.2 } : {}}
-          >
-            {/* Staircase */}
-            <div className="flex flex-col items-end">
-              {[3, 2, 1].map(i => (
-                <div
-                  key={i}
-                  className="bg-white/5 border border-white/10"
-                  style={{ width: 20 + i * 15, height: 10 }}
-                />
-              ))}
-              <span className="text-xs font-code text-dim mt-1">variables</span>
-            </div>
-
-            {/* Elevator */}
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-24 border-2 border-white/10 rounded relative bg-surface/30">
-                <div className="absolute top-1 left-1 right-1 h-1 bg-white/10 rounded" />
-                <div className="absolute bottom-1 left-1 right-1 h-1 bg-white/10 rounded" />
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-code text-dim">if/else</span>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Door at bottom */}
-          <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-8 max-w-2xl w-full px-4">
+        {/* Ejected Bit flies up */}
+        <AnimatePresence>
+          {ejected && (
             <motion.div
-              className="relative w-24 h-36 flex flex-col items-center justify-end"
+              className="flex flex-col items-center gap-2"
+              initial={{ opacity: 0, y: 40, scale: 0.5 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 100, damping: 12 }}
             >
-              {/* return 0 label above door */}
-              <AnimatePresence>
-                {phase >= 1 && (
-                  <motion.div
-                    className="absolute -top-6 px-3 py-1 rounded font-code text-sm font-bold"
-                    style={{ color: '#FFD700', textShadow: '0 0 8px rgba(255,215,0,0.5)' }}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    return 0;
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Door */}
+              <BitCharacter mood="excited" size={60} color="#22C55E" />
               <motion.div
-                className="w-20 h-32 rounded-t-lg border-2 flex items-center justify-center relative overflow-hidden"
-                style={{
-                  borderColor: phase >= 2 ? '#FFD700' : 'rgba(255,255,255,0.2)',
-                  background: phase >= 3 ? 'rgba(255,215,0,0.1)' : 'rgba(17,22,51,0.9)',
-                }}
-                animate={phase >= 3 ? {
-                  boxShadow: ['0 0 0px rgba(255,215,0,0)', '0 0 20px rgba(255,215,0,0.3)', '0 0 0px rgba(255,215,0,0)'],
-                } : {}}
-                transition={{ duration: 1.5, repeat: phase >= 3 ? Infinity : 0 }}
+                className="font-code text-sm font-bold"
+                style={{ color: '#22C55E' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
               >
-                <div className="absolute right-2 top-1/2 w-2 h-4 rounded bg-amber/50" />
-                {phase >= 3 && (
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-b from-transparent to-amber/20"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                  />
-                )}
+                Ejected! return 0;
               </motion.div>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Code block */}
+        <div
+          className="w-full max-w-md rounded-lg border overflow-hidden"
+          style={{
+            background: 'rgba(13,17,40,0.95)',
+            borderColor: 'rgba(255,255,255,0.1)',
+          }}
+        >
+          {/* Title bar */}
+          <div className="flex items-center gap-2 px-4 py-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+            <div className="w-3 h-3 rounded-full" style={{ background: '#FF5F56' }} />
+            <div className="w-3 h-3 rounded-full" style={{ background: '#FFBD2E' }} />
+            <div className="w-3 h-3 rounded-full" style={{ background: '#27C93F' }} />
+            <span className="ml-2 text-xs font-code text-dim">return.c</span>
+          </div>
+
+          {/* Code lines */}
+          <div className="px-4 py-3 font-code text-sm leading-8 relative">
+            {codeLines.map((line, i) => {
+              const isActive = bitLine === i;
+              const isUnreachable = i === 3 && phase >= 4;
+              const isExecuted = (i === 1 && phase >= 1) || (i === 2 && phase >= 2);
+
+              return (
+                <motion.div
+                  key={i}
+                  className="flex items-center gap-3 px-2 py-0.5 rounded relative"
+                  animate={{
+                    background: isActive
+                      ? 'rgba(255,215,0,0.12)'
+                      : isUnreachable
+                      ? 'rgba(255,80,80,0.08)'
+                      : 'transparent',
+                  }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {/* Line number */}
+                  <span className="w-4 text-right select-none text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                    {i + 1}
+                  </span>
+
+                  {/* Bit character indicator */}
+                  <div className="w-8 flex justify-center">
+                    {isActive && !ejected && (
+                      <motion.div
+                        layoutId="bit-indicator"
+                        transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                      >
+                        <BitCharacter mood={i === 2 ? 'happy' : 'neutral'} size={28} color="#00BFFF" />
+                      </motion.div>
+                    )}
+                  </div>
+
+                  {/* Code text */}
+                  <motion.span
+                    style={{
+                      color: isUnreachable ? '#FF6B6B' : isActive ? line.color : `${line.color}88`,
+                      textDecoration: isUnreachable ? 'line-through' : 'none',
+                    }}
+                    animate={{
+                      opacity: isUnreachable ? 0.4 : isExecuted || isActive ? 1 : 0.5,
+                    }}
+                  >
+                    {line.text}
+                  </motion.span>
+
+                  {/* Executed checkmark */}
+                  {isExecuted && !isActive && i !== 2 && (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      style={{ color: '#22C55E' }}
+                      className="text-xs"
+                    >
+                      ✓
+                    </motion.span>
+                  )}
+
+                  {/* Return glow */}
+                  {i === 2 && phase >= 2 && (
+                    <motion.div
+                      className="absolute inset-0 rounded pointer-events-none"
+                      animate={{
+                        boxShadow: ['0 0 0px rgba(34,197,94,0)', '0 0 15px rgba(34,197,94,0.3)', '0 0 0px rgba(34,197,94,0)'],
+                      }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    />
+                  )}
+
+                  {/* Unreachable label */}
+                  {isUnreachable && (
+                    <motion.span
+                      className="text-xs font-code ml-2"
+                      style={{ color: '#FF6B6B' }}
+                      initial={{ opacity: 0, x: -5 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 }}
+                    >
+                      ← unreachable!
+                    </motion.span>
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Bit character walking to door */}
-        <motion.div
-          className="absolute"
-          animate={
-            phase < 2
-              ? { left: '30%', bottom: '25%' }
-              : phase < 3
-              ? { left: '42%', bottom: '15%' }
-              : phase < 4
-              ? { left: '42%', bottom: '5%' }
-              : { left: '42%', bottom: '-15%', opacity: 0 }
-          }
-          transition={{ duration: 1.2, ease: 'easeInOut' }}
+        {/* Output terminal */}
+        <div
+          className="w-full max-w-md rounded-lg border overflow-hidden"
+          style={{
+            background: 'rgba(13,17,40,0.95)',
+            borderColor: 'rgba(255,255,255,0.1)',
+          }}
         >
-          <BitCharacter
-            mood={phase >= 3 ? 'happy' : 'neutral'}
-            size={45}
-            color="#00BFFF"
-          />
-        </motion.div>
-      </motion.div>
-
-      {/* Room goes dark overlay */}
-      <AnimatePresence>
-        {phase >= 5 && (
-          <motion.div
-            className="absolute inset-0 bg-void flex items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.85 }}
-            transition={{ duration: 2 }}
-          >
-            <motion.div
-              className="text-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1 }}
-            >
-              <div className="font-code text-xl mb-2" style={{ color: '#FFD700' }}>return 0;</div>
-              <div className="text-dim font-body text-sm">The function is over. The room goes dark.</div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <div className="flex items-center gap-2 px-4 py-1.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+            <span className="text-xs font-code text-dim">output</span>
+          </div>
+          <div className="px-4 py-2 font-code text-sm min-h-[2.5rem]">
+            {output.length === 0 && <span className="text-dim/40">waiting...</span>}
+            {output.map((line, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                style={{ color: i === 1 ? '#22C55E' : '#FFD700' }}
+              >
+                {line}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       <Narration
-        text="return ends the function and sends a value back to the caller. return 0 means: everything went fine."
+        text="return ends the function and sends a value back to the caller. Code after return never runs — it's unreachable."
         delay={2}
       />
     </div>

@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BitCharacter from '@/components/shared/BitCharacter';
-import Terminal from '@/components/shared/Terminal';
 import Narration from '@/components/shared/Narration';
 import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
+import { useAppStore } from '@/lib/store';
 
 const PARADE_NUMBERS = [
   { value: '5', color: '#00BFFF', delay: 0 },
@@ -30,6 +30,33 @@ export default function TruthOfFive() {
   const [passedNumbers, setPassedNumbers] = useState<string[]>([]);
   const [gateOpen, setGateOpen] = useState(false);
   const { scaledTimeout } = useAnimationSpeed();
+  const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
+
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
+
+  // Arrow key handler — advance to next number
+  const stableStepHandler = useCallback(() => {
+    if (currentIndexRef.current >= PARADE_NUMBERS.length) return false;
+    setCurrentIndex(i => i + 1);
+    return true;
+  }, []);
+
+  const stableStepBackHandler = useCallback(() => {
+    if (currentIndexRef.current <= 0) return false;
+    setCurrentIndex(i => i - 1);
+    return true;
+  }, []);
+
+  useEffect(() => {
+    setSceneStepHandler(stableStepHandler);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
   useEffect(() => {
     if (currentIndex >= PARADE_NUMBERS.length) return;
@@ -60,23 +87,63 @@ export default function TruthOfFive() {
       }
       setEntries(prev => prev.map((e, i) => (i === prev.length - 1 ? { ...e, phase: 'done' } : e)));
       setGateOpen(false);
-      setCurrentIndex(i => i + 1);
     }, 2800);
 
     return () => { c1(); c2(); c3(); };
   }, [currentIndex, scaledTimeout]);
 
   const currentEntry = entries[entries.length - 1];
-  const isZeroCurrent = currentEntry?.isZero && currentEntry.phase !== 'done';
   const showFinalZero = currentIndex >= PARADE_NUMBERS.length;
 
-  const codeText = currentEntry
-    ? `if (${currentEntry.value}) {
-  printf("True");  ${currentEntry.isZero ? '// NEVER runs!' : '// Runs!'}
-}`
-    : `if (5) {
-  printf("True");  // 5 != 0, so TRUE
-}`;
+  // Determine which code line to highlight based on current phase
+  // Line 0: int x = VALUE;
+  // Line 1: (blank)
+  // Line 2: if (x) {            ← 'approach'/'check'
+  // Line 3:     printf("True");  ← 'result' (only if non-zero)
+  // Line 4: }
+  const currentVal = currentEntry?.value ?? '?';
+  const isZero = currentEntry?.isZero;
+  const entryPhase = currentEntry?.phase;
+
+  const getHighlightLine = (): number => {
+    if (!entryPhase || entryPhase === 'done') return -1;
+    if (entryPhase === 'approach') return 0; // assigning value
+    if (entryPhase === 'check') return 2;    // if check
+    if (entryPhase === 'result') return isZero ? 2 : 3; // printf if truthy, stays on if-line if falsy
+    return -1;
+  };
+  const highlightLine = getHighlightLine();
+
+  // Code lines for the panel
+  const CODE_LINES = [
+    {
+      segments: [
+        { text: 'int', color: 'var(--accent-blue)' },
+        { text: ' x = ', color: 'var(--text-dim)' },
+        { text: currentVal, color: currentEntry?.color ?? 'var(--text-primary)' },
+        { text: ';', color: 'var(--text-dim)' },
+      ],
+    },
+    { segments: [] }, // blank
+    {
+      segments: [
+        { text: 'if', color: 'var(--accent-purple)' },
+        { text: ' (x) {', color: 'var(--text-dim)' },
+      ],
+    },
+    {
+      segments: [
+        { text: '    ', color: '' },
+        { text: 'printf', color: 'var(--accent-gold)' },
+        { text: '(', color: 'var(--text-dim)' },
+        { text: '"True\\n"', color: 'var(--accent-green)' },
+        { text: ');', color: 'var(--text-dim)' },
+      ],
+    },
+    {
+      segments: [{ text: '}', color: 'var(--text-dim)' }],
+    },
+  ];
 
   return (
     <div
@@ -217,20 +284,170 @@ export default function TruthOfFive() {
         </AnimatePresence>
       </div>
 
-      {/* Code overlay */}
+      {/* Code panel — top right */}
       <motion.div
-        className="absolute top-6 right-6"
+        className="absolute top-6 right-6 w-80"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.5 }}
       >
-        <Terminal title="truth.c" width="w-72" showCursor={false}>
-          <pre className="font-code text-xs leading-relaxed">
-            <code style={{ color: isZeroCurrent ? '#EF4444' : '#22C55E' }}>
-              {codeText}
-            </code>
-          </pre>
-        </Terminal>
+        <div
+          className="rounded-lg overflow-hidden"
+          style={{
+            background: 'rgba(17, 22, 51, 0.95)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
+          }}
+        >
+          {/* Title bar */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-black/30">
+            <div className="w-2.5 h-2.5 rounded-full bg-red/80" />
+            <div className="w-2.5 h-2.5 rounded-full bg-amber/80" />
+            <div className="w-2.5 h-2.5 rounded-full bg-green/80" />
+            <span className="text-xs text-dim ml-2 font-code">truth.c</span>
+          </div>
+
+          {/* Code lines */}
+          <div className="px-3 py-3 font-code text-sm leading-relaxed">
+            {CODE_LINES.map((line, i) => {
+              const isHighlighted = highlightLine === i;
+              // printf line dims red when zero is being checked
+              const isBlockedLine = i === 3 && isZero && (entryPhase === 'result' || entryPhase === 'check');
+
+              return (
+                <motion.div
+                  key={i}
+                  className="flex items-center gap-2 px-2 py-0.5 rounded"
+                  style={{
+                    background: isHighlighted
+                      ? isBlockedLine
+                        ? 'rgba(239,68,68,0.12)'
+                        : 'rgba(255,215,0,0.1)'
+                      : 'transparent',
+                    borderLeft: isHighlighted
+                      ? `3px solid ${isBlockedLine ? '#EF4444' : 'var(--accent-gold)'}`
+                      : '3px solid transparent',
+                  }}
+                  animate={{
+                    opacity: highlightLine >= 0 && !isHighlighted ? 0.4 : 1,
+                  }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <span className="text-dim/30 text-[10px] w-3 text-right select-none flex-shrink-0">
+                    {line.segments.length > 0 ? i + 1 : ''}
+                  </span>
+                  <span className="flex-1 whitespace-pre">
+                    {line.segments.length > 0 ? (
+                      line.segments.map((seg, j) => (
+                        <span
+                          key={j}
+                          style={{
+                            color: isBlockedLine && i === 3 ? '#EF4444' : seg.color,
+                            textDecoration: isBlockedLine && i === 3 ? 'line-through' : 'none',
+                          }}
+                        >
+                          {seg.text}
+                        </span>
+                      ))
+                    ) : (
+                      <span>&nbsp;</span>
+                    )}
+                  </span>
+                  {isHighlighted && (
+                    <motion.span
+                      className="text-xs font-bold flex-shrink-0"
+                      style={{ color: isBlockedLine ? '#EF4444' : 'var(--accent-gold)' }}
+                      initial={{ opacity: 0, x: -5 }}
+                      animate={{ opacity: 1, x: 0 }}
+                    >
+                      ◀
+                    </motion.span>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Execution status */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`status-${currentIndex}-${entryPhase}`}
+            className="mt-2 text-center text-xs font-body"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.8 }}
+            exit={{ opacity: 0 }}
+          >
+            {entryPhase === 'approach' && (
+              <span className="text-dim">
+                Testing <span style={{ color: currentEntry?.color }}>{currentVal}</span>...
+              </span>
+            )}
+            {entryPhase === 'check' && !isZero && (
+              <span style={{ color: '#22C55E' }}>
+                {currentVal} != 0 → <span className="font-bold">TRUE</span> → enters if block
+              </span>
+            )}
+            {entryPhase === 'check' && isZero && (
+              <span style={{ color: '#EF4444' }}>
+                {currentVal} == 0 → <span className="font-bold">FALSE</span> → skips if block
+              </span>
+            )}
+            {entryPhase === 'result' && !isZero && (
+              <span style={{ color: '#22C55E' }}>
+                printf executes! ✓ Output: &quot;True&quot;
+              </span>
+            )}
+            {entryPhase === 'result' && isZero && (
+              <span style={{ color: '#EF4444' }}>
+                printf SKIPPED ✗ — body never runs
+              </span>
+            )}
+            {(entryPhase === 'done' || !entryPhase) && !showFinalZero && (
+              <span className="text-dim">Press → for next number</span>
+            )}
+            {showFinalZero && (
+              <span className="text-dim">All numbers tested</span>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Output terminal */}
+        {passedNumbers.length > 0 && (
+          <motion.div
+            className="mt-3 rounded-lg overflow-hidden"
+            style={{
+              background: 'rgba(17, 22, 51, 0.9)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)',
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <div className="flex items-center gap-2 px-3 py-1 bg-black/30">
+              <span className="text-[10px] text-dim font-code">output</span>
+            </div>
+            <div className="px-3 py-2 font-code text-xs">
+              {passedNumbers.map((num, i) => (
+                <motion.div
+                  key={`${num}-${i}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-green"
+                >
+                  if({num}) → True
+                </motion.div>
+              ))}
+              {showFinalZero && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-red"
+                >
+                  if(0) → <span className="line-through">True</span> (skipped)
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        )}
       </motion.div>
 
       <Narration

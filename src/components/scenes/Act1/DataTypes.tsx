@@ -34,6 +34,7 @@ const MAX_PHASE = 9;
 export default function DataTypes() {
   const [phase, setPhase] = useState(0);
   const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
 
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
@@ -44,10 +45,20 @@ export default function DataTypes() {
     return true;
   }, []);
 
+  const stableStepBackHandler = useCallback(() => {
+    if (phaseRef.current <= 0) return false;
+    setPhase(prev => prev - 1);
+    return true;
+  }, []);
+
   useEffect(() => {
     setSceneStepHandler(stableStepHandler);
-    return () => setSceneStepHandler(null);
-  }, [setSceneStepHandler, stableStepHandler]);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
   const activeTypeIndex = phase >= 1 && phase <= 4 ? phase - 1 : -1;
   // How many wrong assignments to show (phases 6=1, 7=2, 8=3)

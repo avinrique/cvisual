@@ -1,9 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Narration from '@/components/shared/Narration';
 import GlowBox from '@/components/shared/GlowBox';
-import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
+import { useAppStore } from '@/lib/store';
 
 const printfLines = Array.from({ length: 40 }, (_, i) =>
   `printf("Line ${i + 1}\\n");`
@@ -11,17 +11,31 @@ const printfLines = Array.from({ length: 40 }, (_, i) =>
 
 export default function MillionLineProblem() {
   const [phase, setPhase] = useState(0);
-  const { scaledTimeout } = useAnimationSpeed();
+  const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
+  const stableStepHandler = useCallback(() => {
+    if (phaseRef.current >= 4) return false;
+    setPhase(prev => prev + 1);
+    return true;
+  }, []);
+
+  const stableStepBackHandler = useCallback(() => {
+    if (phaseRef.current <= 0) return false;
+    setPhase(prev => prev - 1);
+    return true;
+  }, []);
 
   useEffect(() => {
-    const c = [
-      scaledTimeout(() => setPhase(1), 1500),
-      scaledTimeout(() => setPhase(2), 4000),
-      scaledTimeout(() => setPhase(3), 5500),
-      scaledTimeout(() => setPhase(4), 7000),
-    ];
-    return () => c.forEach(fn => fn());
-  }, [scaledTimeout]);
+    setSceneStepHandler(stableStepHandler);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-void">

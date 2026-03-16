@@ -12,6 +12,8 @@ export default function CalculatorDemo() {
   const [pressedButton, setPressedButton] = useState<string | null>(null);
   const { scaledTimeout } = useAnimationSpeed();
   const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
+  const showPipelineHUD = useAppStore(s => s.showPipelineHUD);
 
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
@@ -22,16 +24,31 @@ export default function CalculatorDemo() {
     return true;
   }, []);
 
+  const stableStepBackHandler = useCallback(() => {
+    if (phaseRef.current <= 0) return false;
+    setPhase(prev => prev - 1);
+    return true;
+  }, []);
+
   useEffect(() => {
     setSceneStepHandler(stableStepHandler);
-    return () => setSceneStepHandler(null);
-  }, [setSceneStepHandler, stableStepHandler]);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
   // Auto-start phase 1 after a brief delay
   useEffect(() => {
     const cancel = scaledTimeout(() => setPhase(1), 800);
     return cancel;
   }, [scaledTimeout]);
+
+  // Show PipelineHUD when all stages light up
+  useEffect(() => {
+    if (phase === 4) showPipelineHUD();
+  }, [phase, showPipelineHUD]);
 
   // Button press sequence auto-plays when phase 1 starts
   useEffect(() => {

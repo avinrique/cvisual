@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GlowBox from '@/components/shared/GlowBox';
 import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
+import { useAppStore } from '@/lib/store';
 
 const BASE = 7;
 
@@ -30,26 +31,45 @@ export default function MultiplicationFactory() {
   const [highlightLine, setHighlightLine] = useState(-1);
   const [codeStep, setCodeStep] = useState<'init' | 'check' | 'body' | 'update' | 'done'>('init');
   const { scaledTimeout } = useAnimationSpeed();
+  const [step, setStep] = useState(0);
+
+  const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
+  const stepRef = useRef(step);
+  stepRef.current = step;
+
+  const stableStepHandler = useCallback(() => {
+    if (stepRef.current >= 11) return false;
+    setStep(prev => prev + 1);
+    return true;
+  }, []);
+
+  const stableStepBackHandler = useCallback(() => {
+    if (stepRef.current <= 0) return false;
+    setStep(prev => prev - 1);
+    return true;
+  }, []);
 
   useEffect(() => {
-    if (currentMultiplier >= 10) {
-      // Loop done — highlight return
-      const c = scaledTimeout(() => {
-        setHighlightLine(6);
-        setCodeStep('done');
-      }, 800);
-      return c;
-    }
+    setSceneStepHandler(stableStepHandler);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
-    const cancelTimer = scaledTimeout(() => {
-      const m = currentMultiplier + 1;
+  useEffect(() => {
+    if (step === 0) return;
+
+    if (step >= 1 && step <= 10) {
+      const m = step;
       setCurrentMultiplier(m);
 
-      // Step 1: highlight for-line (check condition)
+      // Sub-animation: check → body → update
       setHighlightLine(3);
       setCodeStep('check');
 
-      // Step 2: highlight printf (body)
       const c1 = scaledTimeout(() => {
         setHighlightLine(4);
         setCodeStep('body');
@@ -59,18 +79,20 @@ export default function MultiplicationFactory() {
           setSpark(false);
           setProducts(prev => [...prev, { m, p: BASE * m }]);
 
-          // Step 3: highlight for-line again (i++ update)
           setHighlightLine(3);
           setCodeStep('update');
-        }, 500);
+        }, 400);
         return c2;
-      }, 600);
+      }, 400);
 
       return c1;
-    }, 1400);
+    }
 
-    return () => cancelTimer();
-  }, [currentMultiplier, scaledTimeout]);
+    if (step === 11) {
+      setHighlightLine(6);
+      setCodeStep('done');
+    }
+  }, [step, scaledTimeout]);
 
   return (
     <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-void">

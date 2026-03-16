@@ -13,6 +13,7 @@ export default function InstagramHook() {
   const [loginPressed, setLoginPressed] = useState(false);
   const showPipelineHUD = useAppStore((s) => s.showPipelineHUD);
   const setSceneStepHandler = useAppStore((s) => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore((s) => s.setSceneStepBackHandler);
   const { scaledTimeout } = useAnimationSpeed();
   const passwordTimers = useRef<(() => void)[]>([]);
   const phaseRef = useRef(phase);
@@ -38,10 +39,20 @@ export default function InstagramHook() {
     return false; // let navigation happen
   }, []);
 
+  const handleStepBack = useCallback(() => {
+    if (phaseRef.current <= 0) return false;
+    setPhase(prev => prev - 1);
+    return true;
+  }, []);
+
   useEffect(() => {
     setSceneStepHandler(handleStep);
-    return () => setSceneStepHandler(null);
-  }, [setSceneStepHandler, handleStep]);
+    setSceneStepBackHandler(handleStepBack);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, handleStep, setSceneStepBackHandler, handleStepBack]);
 
   const username = useTypewriter({
     text: 'avin',

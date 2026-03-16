@@ -1,18 +1,18 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Terminal from '@/components/shared/Terminal';
 import Narration from '@/components/shared/Narration';
-import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
+import { useAppStore } from '@/lib/store';
 
-// Phase 0: funnels + code panel appear
-// Phase 1: height drops into funnel
-// Phase 2: height rolls to multiply box
-// Phase 3: multiply glows — result appears in RESULT BOX between multiply & divide
-// Phase 4: weight drops into its funnel (only NOW)
-// Phase 5: weight rolls down, heightSquared moves from result box into divide box
-// Phase 6: divide glows — BMI result drops out below divide
-// Phase 7: printf line + terminal output (no overlap)
+// Execution follows the CODE ORDER:
+// Phase 0: funnels + code panel appear (program loaded)
+// Phase 1: printf("Enter weight:") → weight drops into funnel (scanf weight, line 6)
+// Phase 2: printf("Enter height:") → height drops into funnel (scanf height, line 8)
+// Phase 3: height rolls to multiply box, multiply glows — height×height result appears (line 10, multiply part)
+// Phase 4: weight rolls to divide box, heightSquared moves into divide (line 10, divide part)
+// Phase 5: divide glows — BMI result drops out (line 10 result)
+// Phase 6: printf line + terminal output (line 11)
 
 const BMI_CODE = [
   { text: '#include <stdio.h>', colored: [{ text: '#include <stdio.h>', color: 'var(--accent-purple)' }] },
@@ -32,32 +32,53 @@ const BMI_CODE = [
   { text: '}', colored: [{ text: '}', color: 'var(--text-dim)' }] },
 ];
 
-// Map phase to highlighted code line index
+// Map phase to highlighted code line index — follows code order
 const PHASE_TO_LINE: Record<number, number> = {
-  1: 7,  // scanf height
-  2: 7,
+  1: 6,  // scanf weight
+  2: 8,  // scanf height
   3: 10, // bmi = weight / (height * height) — multiply part
-  4: 5,  // scanf weight
-  5: 10, // bmi = ... — divide part
-  6: 10,
-  7: 11, // printf
+  4: 10, // bmi = ... — divide part
+  5: 10, // result
+  6: 11, // printf
 };
+
+const MAX_PHASE = 6;
 
 export default function BMICalculator() {
   const [phase, setPhase] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { scaledTimeout } = useAnimationSpeed();
 
   const weight = 70;
   const height = 1.75;
   const heightSquared = +(height * height).toFixed(4);
   const bmi = +(weight / heightSquared).toFixed(1);
 
+  // Arrow-key step handler
+  const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
+  const stableStepHandler = useCallback(() => {
+    if (phaseRef.current >= MAX_PHASE) return false;
+    setPhase(prev => prev + 1);
+    return true;
+  }, []);
+
+  const stableStepBackHandler = useCallback(() => {
+    if (phaseRef.current <= 0) return false;
+    setPhase(prev => prev - 1);
+    return true;
+  }, []);
+
   useEffect(() => {
-    const delays = [800, 2200, 3800, 6000, 7800, 9500, 11000];
-    const cleanups = delays.map((d, i) => scaledTimeout(() => setPhase(i + 1), d));
-    return () => cleanups.forEach(c => c());
-  }, [scaledTimeout]);
+    setSceneStepHandler(stableStepHandler);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
   const highlightLine = PHASE_TO_LINE[phase] ?? -1;
 
@@ -82,7 +103,7 @@ export default function BMICalculator() {
         {/* Left side — Machine visualization */}
         <div className="flex-1 flex flex-col items-center">
           <div className="relative w-[500px] h-[360px]">
-            {/* Weight funnel — left */}
+            {/* Weight funnel — left (FIRST in code order) */}
             <motion.div
               className="absolute left-8 top-0 flex flex-col items-center"
               initial={{ opacity: 0, y: -30 }}
@@ -98,15 +119,15 @@ export default function BMICalculator() {
                 </span>
               </div>
 
-              {/* Weight number — only appears at phase 4, rolls to divide at phase 5 */}
-              {phase >= 4 && phase < 6 && (
+              {/* Weight number — drops at phase 1, rolls to divide at phase 4 */}
+              {phase >= 1 && phase < 5 && (
                 <motion.div
                   className="absolute font-code text-lg text-blue font-bold z-10"
                   style={{ textShadow: '0 0 10px var(--glow-blue)' }}
                   initial={{ y: -20, opacity: 0 }}
                   animate={{
-                    y: phase >= 5 ? 235 : 30,
-                    x: phase >= 5 ? 195 : 0,
+                    y: phase >= 4 ? 235 : 30,
+                    x: phase >= 4 ? 195 : 0,
                     opacity: 1,
                   }}
                   transition={{ duration: 1.2, ease: 'easeIn' }}
@@ -116,7 +137,7 @@ export default function BMICalculator() {
               )}
             </motion.div>
 
-            {/* Height funnel — right */}
+            {/* Height funnel — right (SECOND in code order) */}
             <motion.div
               className="absolute right-8 top-0 flex flex-col items-center"
               initial={{ opacity: 0, y: -30 }}
@@ -131,15 +152,15 @@ export default function BMICalculator() {
                   height
                 </span>
               </div>
-              {/* Height number — drops phase 1, rolls to multiply phase 2, consumed phase 3 */}
-              {phase >= 1 && phase < 3 && (
+              {/* Height number — drops at phase 2, rolls to multiply at phase 3 */}
+              {phase >= 2 && phase < 4 && (
                 <motion.div
                   className="absolute font-code text-lg text-green font-bold"
                   style={{ textShadow: '0 0 10px var(--glow-green)' }}
                   initial={{ y: -20, opacity: 1 }}
                   animate={{
-                    y: phase >= 2 ? 95 : 25,
-                    x: phase >= 2 ? -75 : 0,
+                    y: phase >= 3 ? 95 : 25,
+                    x: phase >= 3 ? -75 : 0,
                     opacity: 1,
                   }}
                   transition={{ duration: 1.2, ease: 'easeIn' }}
@@ -197,7 +218,7 @@ export default function BMICalculator() {
               transition={{ delay: 0.6 }}
             >
               <AnimatePresence>
-                {phase >= 3 && phase < 6 && (
+                {phase >= 3 && phase < 5 && (
                   <motion.div
                     className="flex flex-col items-center"
                     initial={{ opacity: 0, scale: 0.5 }}
@@ -221,9 +242,9 @@ export default function BMICalculator() {
             <motion.div
               className="absolute left-[205px] top-[240px] w-[80px] h-[45px] rounded-lg border flex flex-col items-center justify-center"
               style={{
-                borderColor: phase >= 5 ? 'var(--accent-gold)' : 'rgba(255,255,255,0.1)',
-                background: phase >= 5 ? 'rgba(255,215,0,0.1)' : 'rgba(17,22,51,0.8)',
-                boxShadow: phase >= 5 ? '0 0 15px var(--glow-gold)' : 'none',
+                borderColor: phase >= 4 ? 'var(--accent-gold)' : 'rgba(255,255,255,0.1)',
+                background: phase >= 4 ? 'rgba(255,215,0,0.1)' : 'rgba(17,22,51,0.8)',
+                boxShadow: phase >= 4 ? '0 0 15px var(--glow-gold)' : 'none',
               }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -234,7 +255,7 @@ export default function BMICalculator() {
             </motion.div>
 
             {/* Division label */}
-            {phase >= 5 && phase < 7 && (
+            {phase >= 4 && phase < 6 && (
               <motion.div
                 className="absolute left-[295px] top-[248px] font-code text-xs text-gold/70"
                 initial={{ opacity: 0, x: -10 }}
@@ -245,8 +266,8 @@ export default function BMICalculator() {
               </motion.div>
             )}
 
-            {/* BMI result — drops below divide box, does NOT move to printf */}
-            {phase >= 6 && (
+            {/* BMI result — drops below divide box */}
+            {phase >= 5 && (
               <motion.div
                 className="absolute left-[195px] top-[295px] flex flex-col items-center"
                 initial={{ opacity: 0, y: -15, scale: 0.5 }}
@@ -268,7 +289,7 @@ export default function BMICalculator() {
 
           {/* printf + terminal — BELOW the machine, no overlap */}
           <div className="flex flex-col items-center gap-3 mt-2">
-            {phase >= 7 && (
+            {phase >= 6 && (
               <motion.div
                 className="flex items-center gap-2"
                 initial={{ opacity: 0 }}
@@ -287,7 +308,7 @@ export default function BMICalculator() {
               </motion.div>
             )}
 
-            {phase >= 7 && (
+            {phase >= 6 && (
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -391,19 +412,18 @@ export default function BMICalculator() {
               exit={{ opacity: 0 }}
             >
               {phase === 0 && 'Program loaded...'}
-              {phase === 1 && 'Reading height from user...'}
-              {phase === 2 && 'height = 1.75'}
+              {phase === 1 && 'Reading weight from user...'}
+              {phase === 2 && 'Reading height from user...'}
               {phase === 3 && `Computing height × height = ${heightSquared}`}
-              {phase === 4 && 'Reading weight from user...'}
-              {phase === 5 && `Computing ${weight} / ${heightSquared}...`}
-              {phase === 6 && `BMI = ${bmi}`}
-              {phase === 7 && 'Printing result to console.'}
+              {phase === 4 && `Computing ${weight} / ${heightSquared}...`}
+              {phase === 5 && `BMI = ${bmi}`}
+              {phase === 6 && 'Printing result to console.'}
             </motion.div>
           </AnimatePresence>
         </motion.div>
       </div>
 
-      {phase >= 7 && (
+      {phase >= 6 && (
         <Narration
           text="scanf pours data in, the machine crunches it, printf announces the result. That's the complete I/O pipeline."
           delay={0.8}

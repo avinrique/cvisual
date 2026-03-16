@@ -39,6 +39,7 @@ export default function FirstPrintf() {
   const [activeHighlight, setActiveHighlight] = useState<number[]>([]);
   const { scaledTimeout } = useAnimationSpeed();
   const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
 
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
@@ -57,10 +58,20 @@ export default function FirstPrintf() {
     return true;
   }, []);
 
+  const stableStepBackHandler = useCallback(() => {
+    if (phaseRef.current <= 0) return false;
+    setPhase(prev => prev - 1);
+    return true;
+  }, []);
+
   useEffect(() => {
     setSceneStepHandler(stableStepHandler);
-    return () => setSceneStepHandler(null);
-  }, [setSceneStepHandler, stableStepHandler]);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
   // When CodeTyper finishes, mark code as complete
   const handleCodeComplete = useCallback(() => {

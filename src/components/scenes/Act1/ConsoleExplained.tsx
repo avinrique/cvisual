@@ -37,6 +37,7 @@ const NARRATIONS = [
 export default function ConsoleExplained() {
   const [phase, setPhase] = useState(0);
   const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
 
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
@@ -47,10 +48,20 @@ export default function ConsoleExplained() {
     return true;
   }, []);
 
+  const stableStepBackHandler = useCallback(() => {
+    if (phaseRef.current <= 0) return false;
+    setPhase(prev => prev - 1);
+    return true;
+  }, []);
+
   useEffect(() => {
     setSceneStepHandler(stableStepHandler);
-    return () => setSceneStepHandler(null);
-  }, [setSceneStepHandler, stableStepHandler]);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
   const showingCode = phase >= 0 && phase <= 3;
   const showingVignettes = phase >= 4 && phase < 8;

@@ -112,6 +112,7 @@ export default function FormatSpecifiers() {
   const [outputVisible, setOutputVisible] = useState(false);
   const { scaledTimeout } = useAnimationSpeed();
   const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
 
   const ex = EXAMPLES[exIndex % EXAMPLES.length];
 
@@ -124,10 +125,20 @@ export default function FormatSpecifiers() {
     return true;
   }, []);
 
+  const stableStepBackHandler = useCallback(() => {
+    if (phaseRef.current <= 0) return false;
+    setPhase(prev => prev - 1);
+    return true;
+  }, []);
+
   useEffect(() => {
     setSceneStepHandler(stableStepHandler);
-    return () => setSceneStepHandler(null);
-  }, [setSceneStepHandler, stableStepHandler]);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
   // Phase-based side effects
   useEffect(() => {

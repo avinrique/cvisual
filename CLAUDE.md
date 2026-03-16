@@ -25,7 +25,7 @@ An animated, interactive educational presentation that teaches C programming con
 - `scenes/Opening.tsx`, `scenes/Closing.tsx`
 - `scenes/Act1/` through `scenes/Act5/`
 
-**Shared components** (`src/components/shared/`): `Terminal`, `CodeTyper`, `BitCharacter`, `GlowBox`, `Narration`, `ConveyorBelt`, `RunningTrack`, `InteractiveIndicator` — reusable visual building blocks used across scenes.
+**Shared components** (`src/components/shared/`): `Terminal`, `CodeTyper`, `BitCharacter`, `GlowBox`, `Narration`, `InteractiveIndicator` — reusable visual building blocks used across scenes.
 
 **HUD components**: `NavigationHUD`, `PipelineHUD`, `SpeedControl` — overlay UI rendered by SceneManager.
 

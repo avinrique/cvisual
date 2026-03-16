@@ -137,6 +137,7 @@ export default function ScanfReverse() {
   const [stepInExample, setStepInExample] = useState(0);
 
   const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
 
   const exampleIndexRef = useRef(exampleIndex);
   exampleIndexRef.current = exampleIndex;
@@ -170,10 +171,37 @@ export default function ScanfReverse() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const stableStepBackHandler = useCallback(() => {
+    const ex = exampleIndexRef.current;
+    const st = stepRef.current;
+
+    if (st > 0) {
+      // Go back one line in current example
+      setStepInExample(prev => prev - 1);
+      return true;
+    }
+
+    if (ex > 0) {
+      // Go back to previous example's last step
+      const prevMaxStep = examples[ex - 1].lines.length;
+      setExampleIndex(prev => prev - 1);
+      setStepInExample(prevMaxStep);
+      return true;
+    }
+
+    // At the very beginning — let scene go back
+    return false;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     setSceneStepHandler(stableStepHandler);
-    return () => setSceneStepHandler(null);
-  }, [setSceneStepHandler, stableStepHandler]);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
   // Current highlighted line (null when step is 0 = overview)
   const activeLine = stepInExample > 0 ? currentExample.lines[stepInExample - 1].line : null;

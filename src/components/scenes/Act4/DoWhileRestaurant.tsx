@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Narration from '@/components/shared/Narration';
 import { useAnimationSpeed } from '@/components/hooks/useAnimationSpeed';
+import { useAppStore } from '@/lib/store';
 
 const DISHES = [
   { name: 'Soup', emoji: '🍜', color: '#22C55E' },
@@ -44,61 +45,73 @@ export default function DoWhileRestaurant() {
   const [highlightLine, setHighlightLine] = useState(-1);
   const [loopCount, setLoopCount] = useState(0);
   const { scaledTimeout } = useAnimationSpeed();
+  const [step, setStep] = useState(0);
 
-  // Auto-play the loop
+  // Step handler for arrow-key navigation
+  const setSceneStepHandler = useAppStore(s => s.setSceneStepHandler);
+  const setSceneStepBackHandler = useAppStore(s => s.setSceneStepBackHandler);
+  const stepRef = useRef(step);
+  stepRef.current = step;
+
+  const stableStepHandler = useCallback(() => {
+    if (stepRef.current >= 5) return false;
+    setStep(prev => prev + 1);
+    return true;
+  }, []);
+
+  const stableStepBackHandler = useCallback(() => {
+    if (stepRef.current <= 0) return false;
+    setStep(prev => prev - 1);
+    return true;
+  }, []);
+
   useEffect(() => {
-    if (flowPhase === 'done') return;
+    setSceneStepHandler(stableStepHandler);
+    setSceneStepBackHandler(stableStepBackHandler);
+    return () => {
+      setSceneStepHandler(null);
+      setSceneStepBackHandler(null);
+    };
+  }, [setSceneStepHandler, stableStepHandler, setSceneStepBackHandler, stableStepBackHandler]);
 
-    // Start first iteration
-    if (flowPhase === 'idle') {
-      const c = scaledTimeout(() => {
-        setFlowPhase('serve');
-        setDishIndex(0);
-        setHighlightLine(5); // do {
-      }, 1000);
-      return c;
-    }
+  // Step-driven dish serving with auto-play sub-animations
+  useEffect(() => {
+    if (step === 0) return; // idle, waiting for first arrow press
 
-    if (flowPhase === 'serve') {
-      // Serve the current dish
-      setHighlightLine(6); // serveDish()
-      const c = scaledTimeout(() => {
-        setServedDishes(prev => [...prev, DISHES[dishIndex]]);
-        setHighlightLine(7); // dish++
+    if (step >= 1 && step <= 4) {
+      const idx = step - 1;
+      setDishIndex(idx);
+      setFlowPhase('serve');
+      setHighlightLine(5); // do {
+      setLoopCount(idx);
 
+      // Sub-animation: serve → ask → answer
+      const c1 = scaledTimeout(() => {
+        setHighlightLine(6); // serveDish()
         const c2 = scaledTimeout(() => {
-          setFlowPhase('ask');
-          setHighlightLine(8); // printf("More?")
+          setServedDishes(prev => [...prev, DISHES[idx]]);
+          setHighlightLine(7); // dish++
+          const c3 = scaledTimeout(() => {
+            setFlowPhase('ask');
+            setHighlightLine(8); // printf("More?")
+            const c4 = scaledTimeout(() => {
+              setHighlightLine(10); // while (more)
+              setFlowPhase('answer');
+            }, 800);
+            return c4;
+          }, 400);
+          return c3;
         }, 600);
         return c2;
-      }, 800);
-      return c;
+      }, 100);
+      return c1;
     }
 
-    if (flowPhase === 'ask') {
-      const c = scaledTimeout(() => {
-        setHighlightLine(10); // while (more)
-        setFlowPhase('answer');
-      }, 1200);
-      return c;
+    if (step === 5) {
+      setFlowPhase('done');
+      setHighlightLine(12); // printf("Full!")
     }
-
-    if (flowPhase === 'answer') {
-      const hasMore = dishIndex + 1 < DISHES.length;
-      const c = scaledTimeout(() => {
-        if (hasMore) {
-          setLoopCount(prev => prev + 1);
-          setDishIndex(prev => prev + 1);
-          setHighlightLine(6); // back to serveDish
-          setFlowPhase('serve');
-        } else {
-          setHighlightLine(12); // printf("Full!")
-          setFlowPhase('done');
-        }
-      }, 1200);
-      return c;
-    }
-  }, [flowPhase, dishIndex, scaledTimeout]);
+  }, [step, scaledTimeout]);
 
   const isLastDish = dishIndex >= DISHES.length - 1;
   const currentDish = dishIndex >= 0 ? DISHES[dishIndex] : null;
@@ -404,7 +417,23 @@ export default function DoWhileRestaurant() {
         </motion.div>
       </div>
 
-      <Narration text="do-while: act first, ask questions later. The body always runs at least once." delay={2} />
+      <Narration
+        text={
+          step === 0
+            ? 'The customer sits down. In a do-while restaurant, the first dish is guaranteed — no questions asked.'
+            : flowPhase === 'serve'
+            ? `The kitchen serves dish #${dishIndex + 1} — the body executes BEFORE checking the condition.`
+            : flowPhase === 'ask'
+            ? 'Now the waiter asks: "More?" — this is the while(more) check AFTER the body ran.'
+            : flowPhase === 'answer' && !isLastDish
+            ? 'Customer says "Yes!" — condition is true, so the loop runs again from the top.'
+            : flowPhase === 'answer' && isLastDish
+            ? 'Customer says "No, full!" — condition is false, so the loop finally exits.'
+            : flowPhase === 'done'
+            ? 'do-while always runs at least once. Unlike while, it acts first and asks questions later.'
+            : 'do-while: act first, ask questions later. The body always runs at least once.'
+        }
+      />
     </div>
   );
 }
